@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Build-script approval. esbuild fetches its platform binary (Vitest/tsx);
+# @embedded-postgres/* extracts the real PostgreSQL binaries for the Docker-free
+# concurrency test.
+allowBuilds:
+  esbuild: true
+  "@embedded-postgres/windows-x64": true
