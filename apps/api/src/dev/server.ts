@@ -103,6 +103,18 @@ async function main(): Promise<void> {
     const ctx = clientContext(req);
     const route = `${method} ${path}`;
 
+    // Permissive CORS for local development so the web PWA (a different origin,
+    // e.g. http://localhost:3000) can call this server. Dev-only.
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "content-type, authorization");
+    res.setHeader("Access-Control-Max-Age", "600");
+    if (method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     switch (route) {
       case "POST /auth/register": {
         const result = await auth.register(await readJson(req), ctx);

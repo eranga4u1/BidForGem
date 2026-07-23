@@ -4,7 +4,9 @@ packages:
 
 # Build-script approval. esbuild fetches its platform binary (Vitest/tsx);
 # @embedded-postgres/* extracts the real PostgreSQL binaries for the Docker-free
-# concurrency test.
+# concurrency test. sharp is not needed (the web app uses plain <img>, not
+# next/image), so its native build is declined.
 allowBuilds:
   esbuild: true
   "@embedded-postgres/windows-x64": true
+  sharp: false
