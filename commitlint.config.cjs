@@ -5,7 +5,24 @@ module.exports = {
     "scope-enum": [
       1,
       "always",
-      ["api", "web", "mobile", "types", "api-client", "config", "repo", "ci", "deps"],
+      [
+        "api",
+        "web",
+        "mobile",
+        "types",
+        "api-client",
+        "config",
+        "repo",
+        "ci",
+        "deps",
+        // domain scopes (build order)
+        "db",
+        "auth",
+        "bidding",
+        "auctions",
+        "media",
+        "notifications",
+      ],
     ],
   },
 };
