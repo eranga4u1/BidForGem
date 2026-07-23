@@ -150,6 +150,27 @@ export const appSettings = pgTable("app_settings", {
   updatedBy: uuid("updated_by").references(() => users.id),
 });
 
+export const refreshTokens = pgTable(
+  "refresh_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // SHA-256 hash of the opaque token; the raw token is never stored.
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+  },
+  (t) => [
+    index("refresh_tokens_token_hash_idx").on(t.tokenHash),
+    index("refresh_tokens_user_id_idx").on(t.userId),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Gem = typeof gems.$inferSelect;
 export type Media = typeof media.$inferSelect;
@@ -157,3 +178,4 @@ export type Auction = typeof auctions.$inferSelect;
 export type Bid = typeof bids.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type AppSetting = typeof appSettings.$inferSelect;
+export type RefreshToken = typeof refreshTokens.$inferSelect;

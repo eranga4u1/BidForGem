@@ -7,3 +7,4 @@
  * build-order steps; step 1 establishes the package and the money primitive.
  */
 export * from "./money.js";
+export * from "./auth.js";

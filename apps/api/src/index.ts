@@ -19,3 +19,4 @@ export {
   type PlaceBidResult,
   type PlaceBidRejection,
 } from "./bidding/place-bid.js";
+export * from "./auth/index.js";
