@@ -17,6 +17,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
+    "dev:server": "tsx src/dev/server.ts",
     "seed": "tsx src/db/seed.ts",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
