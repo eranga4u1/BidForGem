@@ -22,3 +22,4 @@ export {
 export * from "./auth/index.js";
 export * from "./gems/index.js";
 export * from "./storage/index.js";
+export * from "./auctions/index.js";

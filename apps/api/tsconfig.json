@@ -3,7 +3,13 @@
   "extends": "@gem/config/tsconfig/base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node", "reflect-metadata"],
+    // NestJS uses decorators + reflected constructor metadata for DI. Disable
+    // verbatimModuleSyntax so type-only imports aren't elided from the emitted
+    // decorator metadata.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false
   },
   "include": ["src/**/*.ts", "vitest.config.ts", "*.config.ts"],
   "exclude": ["dist", "node_modules"]
