@@ -1,0 +1,28 @@
+{
+  "name": "@gem/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared ESLint, Prettier, and TypeScript configuration for the Gem monorepo.",
+  "type": "module",
+  "exports": {
+    "./eslint/base": "./eslint/base.js",
+    "./prettier": "./prettier/index.js",
+    "./tsconfig/base.json": "./tsconfig/base.json"
+  },
+  "files": [
+    "eslint",
+    "prettier",
+    "tsconfig"
+  ],
+  "peerDependencies": {
+    "eslint": "^10.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^6.0.0"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "typescript-eslint": "^8.65.0"
+  }
+}

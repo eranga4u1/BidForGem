@@ -1,0 +1,2 @@
+# The api (NestJS), web (Next.js), and mobile (Expo) apps are scaffolded in their
+# own build-order steps (3+). This file keeps the apps/ workspace directory present.
