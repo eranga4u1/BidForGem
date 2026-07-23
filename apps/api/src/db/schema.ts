@@ -10,6 +10,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -31,6 +32,7 @@ export const auctionStatus = pgEnum("auction_status", [
   "canceled",
 ]);
 export const mediaType = pgEnum("media_type", ["photo", "video", "certificate"]);
+export const mediaStatus = pgEnum("media_status", ["pending", "ready"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -59,6 +61,8 @@ export const gems = pgTable(
     origin: text("origin"),
     status: gemStatus("status").notNull().default("draft"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Soft-delete: gems are referenced by auctions/bids and never hard-deleted.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [check("gems_carat_milli_nonneg", sql`${t.caratMilli} >= 0`)],
 );
@@ -71,11 +75,21 @@ export const media = pgTable(
       .notNull()
       .references(() => gems.id, { onDelete: "cascade" }),
     type: mediaType("type").notNull(),
-    url: text("url").notNull(),
+    // Public CDN URL (photos/videos); null until completed and always null for
+    // certificates, which are served only via short-lived signed URLs.
+    url: text("url"),
     mime: text("mime").notNull(),
     size: integer("size").notNull(),
+    status: mediaStatus("status").notNull().default("pending"),
+    // Server-generated object key. Never derived from a client filename.
+    storageKey: text("storage_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [check("media_size_nonneg", sql`${t.size} >= 0`)],
+  (t) => [
+    check("media_size_nonneg", sql`${t.size} >= 0`),
+    index("media_gem_id_idx").on(t.gemId),
+    uniqueIndex("media_storage_key_uq").on(t.storageKey),
+  ],
 );
 
 export const auctions = pgTable(

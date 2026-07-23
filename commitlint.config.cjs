@@ -18,6 +18,7 @@ module.exports = {
         // domain scopes (build order)
         "db",
         "auth",
+        "gems",
         "bidding",
         "auctions",
         "media",

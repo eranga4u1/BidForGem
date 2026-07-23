@@ -20,3 +20,5 @@ export {
   type PlaceBidRejection,
 } from "./bidding/place-bid.js";
 export * from "./auth/index.js";
+export * from "./gems/index.js";
+export * from "./storage/index.js";

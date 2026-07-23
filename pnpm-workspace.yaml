@@ -10,3 +10,7 @@ allowBuilds:
   esbuild: true
   "@embedded-postgres/windows-x64": true
   sharp: false
+
+minimumReleaseAgeExclude:
+  - "@aws-sdk/client-s3@3.1093.0"
+  - "@aws-sdk/s3-request-presigner@3.1093.0"
