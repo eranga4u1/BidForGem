@@ -23,6 +23,7 @@ module.exports = {
         "auctions",
         "media",
         "notifications",
+        "billing",
       ],
     ],
   },
