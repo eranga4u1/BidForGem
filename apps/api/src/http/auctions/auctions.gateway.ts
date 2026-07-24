@@ -8,7 +8,12 @@ import {
   WebSocketServer,
 } from "@nestjs/websockets";
 import type { Server, Socket } from "socket.io";
-import type { AuctionClosedEvent, AuctionExtendedEvent, BidPlacedEvent } from "@gem/types";
+import type {
+  AuctionClosedEvent,
+  AuctionExtendedEvent,
+  BidPlacedEvent,
+  UserNotificationEvent,
+} from "@gem/types";
 import type { AuthConfig } from "../../auth/config.js";
 import { extractBearerToken } from "../../auth/guard.js";
 import { verifyAccessToken } from "../../auth/tokens.js";
@@ -36,7 +41,11 @@ export class AuctionsGateway implements OnGatewayConnection {
     const token = authToken ?? extractBearerToken(socket.handshake.headers.authorization);
     if (!token) return;
     const verified = await verifyAccessToken(this.config, token);
-    if (verified.ok) (socket.data as { userId?: string }).userId = verified.claims.sub;
+    if (verified.ok) {
+      (socket.data as { userId?: string }).userId = verified.claims.sub;
+      // Join a per-user room so we can push user-scoped events (outbid/won).
+      void socket.join(`user:${verified.claims.sub}`);
+    }
   }
 
   @SubscribeMessage("join")
@@ -64,5 +73,10 @@ export class AuctionsGateway implements OnGatewayConnection {
 
   emitAuctionClosed(payload: AuctionClosedEvent): void {
     this.server.to(`auction:${payload.auctionId}`).emit("auction:closed", payload);
+  }
+
+  /** Push a user-scoped notification to only that user's sockets. */
+  emitToUser(userId: string, event: UserNotificationEvent): void {
+    this.server.to(`user:${userId}`).emit("notification", event);
   }
 }

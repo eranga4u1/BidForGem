@@ -30,6 +30,7 @@ export const auctionStatus = pgEnum("auction_status", [
   "active",
   "closed",
   "canceled",
+  "sold",
 ]);
 export const mediaType = pgEnum("media_type", ["photo", "video", "certificate"]);
 export const mediaStatus = pgEnum("media_status", ["pending", "ready"]);
@@ -147,15 +148,20 @@ export const bids = pgTable(
   ],
 );
 
-export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-  readAt: timestamp("read_at", { withTimezone: true }),
-});
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("notifications_user_created_idx").on(t.userId, sql`${t.createdAt} DESC`)],
+);
 
 export const appSettings = pgTable("app_settings", {
   key: text("key").primaryKey(),

@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { Schema } from "../db/client.js";
-import { auctions, bids, gems, type Auction, type Bid } from "../db/schema.js";
+import { auctions, bids, gems, notifications, type Auction, type Bid } from "../db/schema.js";
 
 export type PlaceBidRejection =
   | "AUCTION_NOT_FOUND"
@@ -13,7 +13,8 @@ export type PlaceBidRejection =
   | "ALREADY_HIGHEST_BIDDER";
 
 export type PlaceBidResult =
-  { ok: true; bid: Bid; auction: Auction } | { ok: false; reason: PlaceBidRejection };
+  | { ok: true; bid: Bid; auction: Auction; outbidUserId: string | null }
+  | { ok: false; reason: PlaceBidRejection };
 
 export interface PlaceBidInput {
   auctionId: string;
@@ -83,9 +84,21 @@ export async function placeBid<T extends PgQueryResultHKT>(
       return { ok: false, reason: "ALREADY_HIGHEST_BIDDER" };
     }
 
+    // The bidder currently holding the top spot (if any) is about to be displaced.
+    const outbidUserId = auction.highestBidderId;
+
     // 6. Insert the bid.
     const [bid] = await tx.insert(bids).values({ auctionId, bidderId, amount }).returning();
     if (!bid) throw new Error("Bid insert returned no row");
+
+    // Outbid notification for the displaced leader — SAME transaction as the bid.
+    if (outbidUserId !== null) {
+      await tx.insert(notifications).values({
+        userId: outbidUserId,
+        type: "OUTBID",
+        payload: { auctionId, amount, currency: auction.currency },
+      });
+    }
 
     // Anti-snipe: if this winning bid lands within the window of end_at, extend.
     let endAt = auction.endAt;
@@ -106,6 +119,6 @@ export async function placeBid<T extends PgQueryResultHKT>(
       .returning();
     if (!updated) throw new Error("Auction update returned no row");
 
-    return { ok: true, bid, auction: updated };
+    return { ok: true, bid, auction: updated, outbidUserId };
   });
 }

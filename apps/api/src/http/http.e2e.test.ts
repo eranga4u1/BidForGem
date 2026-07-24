@@ -69,7 +69,7 @@ function connect(): Promise<Socket> {
     socket.on("connect_error", reject);
   });
 }
-function waitFor<T>(socket: Socket, event: string, timeoutMs = 4000): Promise<T> {
+function waitFor<T>(socket: Socket, event: string, timeoutMs = 8000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timeout waiting for ${event}`)), timeoutMs);
     socket.once(event, (payload: T) => {

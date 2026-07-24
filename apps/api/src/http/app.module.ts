@@ -8,9 +8,17 @@ import { LoggingInterceptor } from "./common/logging.interceptor.js";
 import { DatabaseModule } from "./database.module.js";
 import { GemsModule } from "./gems/gems.module.js";
 import { HealthController } from "./health/health.controller.js";
+import { NotificationsModule } from "./notifications/notifications.module.js";
 
 @Module({
-  imports: [DatabaseModule, CommonModule, AuthModule, GemsModule, AuctionsModule],
+  imports: [
+    DatabaseModule,
+    CommonModule,
+    AuthModule,
+    GemsModule,
+    AuctionsModule,
+    NotificationsModule,
+  ],
   controllers: [HealthController],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

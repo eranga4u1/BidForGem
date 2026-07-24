@@ -9,6 +9,7 @@ import { createPoolDatabase } from "../db/client.js";
 import type { Db } from "../gems/access.js";
 import { createGemsService } from "../gems/gems-service.js";
 import { createMediaService } from "../gems/media-service.js";
+import { createNotificationsService } from "../notifications/notifications-service.js";
 import { createMemoryStorage } from "../storage/memory-provider.js";
 import type { StorageProvider } from "../storage/provider.js";
 import { createS3Storage } from "../storage/s3-provider.js";
@@ -19,6 +20,7 @@ import {
   DB,
   GEMS_SERVICE,
   MEDIA_SERVICE,
+  NOTIFICATIONS_SERVICE,
   RATE_LIMITER,
   STORAGE,
 } from "./tokens.js";
@@ -81,6 +83,11 @@ import {
       useFactory: (db: Db) => createAuctionsService({ db }),
       inject: [DB],
     },
+    {
+      provide: NOTIFICATIONS_SERVICE,
+      useFactory: (db: Db) => createNotificationsService({ db }),
+      inject: [DB],
+    },
   ],
   exports: [
     DB,
@@ -91,6 +98,7 @@ import {
     GEMS_SERVICE,
     MEDIA_SERVICE,
     AUCTIONS_SERVICE,
+    NOTIFICATIONS_SERVICE,
   ],
 })
 export class DatabaseModule {}

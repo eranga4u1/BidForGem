@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { auctions, bids } from "../db/schema.js";
+import { auctions, bids, notifications } from "../db/schema.js";
 import { insertAuction, insertGem, insertUser, makeTestDb, type AnyDb } from "../test/harness.js";
 import { placeBid } from "./place-bid.js";
 
@@ -141,6 +141,26 @@ describe("placeBid (single-connection rules, PGlite)", () => {
     const rows = await db.select().from(bids).where(eq(bids.auctionId, auction.id));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.amount).toBe(2500);
+  });
+
+  it("inserts an OUTBID notification for the displaced highest bidder", async () => {
+    const auction = await insertAuction(db, gemId, { startPrice: 1000, minIncrement: 100 });
+    const first = await insertUser(db);
+    const second = await insertUser(db);
+
+    const r1 = await placeBid(db, { auctionId: auction.id, bidderId: first.id, amount: 1000 });
+    expect(r1.ok).toBe(true);
+    if (r1.ok) expect(r1.outbidUserId).toBeNull(); // no previous leader
+
+    const r2 = await placeBid(db, { auctionId: auction.id, bidderId: second.id, amount: 1100 });
+    expect(r2.ok).toBe(true);
+    if (r2.ok) expect(r2.outbidUserId).toBe(first.id);
+
+    const rows = await db
+      .select({ type: notifications.type })
+      .from(notifications)
+      .where(eq(notifications.userId, first.id));
+    expect(rows.map((n) => n.type)).toEqual(["OUTBID"]);
   });
 
   describe("anti-snipe", () => {

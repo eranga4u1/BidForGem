@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const auctionStatusSchema = z.enum(["scheduled", "active", "closed", "canceled"]);
+export const auctionStatusSchema = z.enum(["scheduled", "active", "closed", "canceled", "sold"]);
 export type AuctionStatus = z.infer<typeof auctionStatusSchema>;
 
 const currencySchema = z

@@ -105,6 +105,15 @@ export class AuctionsController {
     if (pre && pre.endAt.getTime() !== result.auction.endAt.getTime()) {
       this.gateway.emitAuctionExtended({ auctionId: id, endAt: endAtIso });
     }
+    // User-scoped nudge for the displaced leader (the OUTBID row was persisted
+    // inside the placeBid transaction).
+    if (result.outbidUserId !== null) {
+      this.gateway.emitToUser(result.outbidUserId, {
+        type: "OUTBID",
+        payload: { auctionId: id, amount: result.bid.amount },
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     return { ok: true, auction: toPublicAuction(result.auction, bidCount) };
   }
