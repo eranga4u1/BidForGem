@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
+import { AdminModule } from "./admin/admin.module.js";
 import { AuctionsModule } from "./auctions/auctions.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
@@ -18,6 +19,7 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
     GemsModule,
     AuctionsModule,
     NotificationsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

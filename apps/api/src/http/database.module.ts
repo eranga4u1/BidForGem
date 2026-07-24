@@ -10,6 +10,7 @@ import type { Db } from "../gems/access.js";
 import { createGemsService } from "../gems/gems-service.js";
 import { createMediaService } from "../gems/media-service.js";
 import { createNotificationsService } from "../notifications/notifications-service.js";
+import { createSettingsService, type SettingsService } from "../settings/settings-service.js";
 import { createMemoryStorage } from "../storage/memory-provider.js";
 import type { StorageProvider } from "../storage/provider.js";
 import { createS3Storage } from "../storage/s3-provider.js";
@@ -22,6 +23,7 @@ import {
   MEDIA_SERVICE,
   NOTIFICATIONS_SERVICE,
   RATE_LIMITER,
+  SETTINGS_SERVICE,
   STORAGE,
 } from "./tokens.js";
 
@@ -63,6 +65,12 @@ import {
     { provide: AUTH_CONFIG, useFactory: () => loadAuthConfig() },
     { provide: RATE_LIMITER, useFactory: () => createInMemoryRateLimiter() },
     {
+      provide: SETTINGS_SERVICE,
+      useFactory: (db: Db) =>
+        createSettingsService(db, { ttlMs: Number(process.env.SETTINGS_CACHE_TTL_MS ?? 60_000) }),
+      inject: [DB],
+    },
+    {
       provide: AUTH_SERVICE,
       useFactory: (db: Db, config: AuthConfig, rateLimiter: RateLimiter) =>
         createAuthService({ db, config, rateLimiter }),
@@ -70,8 +78,8 @@ import {
     },
     {
       provide: GEMS_SERVICE,
-      useFactory: (db: Db) => createGemsService({ db }),
-      inject: [DB],
+      useFactory: (db: Db, settings: SettingsService) => createGemsService({ db, settings }),
+      inject: [DB, SETTINGS_SERVICE],
     },
     {
       provide: MEDIA_SERVICE,
@@ -99,6 +107,7 @@ import {
     MEDIA_SERVICE,
     AUCTIONS_SERVICE,
     NOTIFICATIONS_SERVICE,
+    SETTINGS_SERVICE,
   ],
 })
 export class DatabaseModule {}

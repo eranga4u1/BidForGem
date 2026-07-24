@@ -14,6 +14,7 @@ import type { PublicUser } from "@gem/types";
 import type { GemsService } from "../../gems/gems-service.js";
 import { AuthGuard, OptionalAuthGuard } from "../common/auth.guard.js";
 import { CurrentUser } from "../common/current-user.decorator.js";
+import { httpForReason } from "../common/error-envelope.js";
 import { unwrap } from "../common/respond.js";
 import { GEMS_SERVICE } from "../tokens.js";
 
@@ -54,6 +55,14 @@ export class GemsController {
   @Post(":id/publish")
   @UseGuards(AuthGuard)
   async publish(@CurrentUser() user: PublicUser, @Param("id") id: string) {
-    return unwrap(await this.gems.publish(user.id, id));
+    const result = await this.gems.publish(user.id, id);
+    if (!result.ok && result.reason === "POSTING_FEE_REQUIRED") {
+      // 402 Payment Required — carry the fee + placeholder intent ref.
+      throw httpForReason("POSTING_FEE_REQUIRED", {
+        fee: result.fee,
+        paymentIntentRef: result.paymentIntentRef,
+      });
+    }
+    return unwrap(result);
   }
 }

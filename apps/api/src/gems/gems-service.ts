@@ -1,13 +1,17 @@
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
 import {
   caratMilliFromCarat,
   createGemInputSchema,
   gemFilterSchema,
   updateGemInputSchema,
+  type PostingFee,
   type PublicGem,
 } from "@gem/types";
 import type { ZodError } from "zod";
+import { resolvePostingFee } from "../billing/posting-fee.js";
 import { gems, media, type Gem } from "../db/schema.js";
+import type { SettingsService } from "../settings/settings-service.js";
 import { isDeleted, isGemLocked, loadGem, readyMedia, type Db } from "./access.js";
 import { toPublicGem } from "./mappers.js";
 
@@ -27,7 +31,9 @@ export type DeleteGemResult =
   { ok: true } | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" | "GEM_NOT_EDITABLE" };
 
 export type PublishGemResult =
-  { ok: true; gem: PublicGem } | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" | "GEM_NOT_DRAFT" };
+  | { ok: true; gem: PublicGem }
+  | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" | "GEM_NOT_DRAFT" }
+  | { ok: false; reason: "POSTING_FEE_REQUIRED"; fee: PostingFee; paymentIntentRef: string };
 
 export type ListGemsResult =
   | { ok: true; items: PublicGem[]; limit: number; offset: number }
@@ -45,6 +51,8 @@ export interface GemsService {
 export interface GemsServiceDeps {
   db: Db;
   now?: () => Date;
+  /** When provided, publish is gated on the posting fee. Absent = always free. */
+  settings?: SettingsService;
 }
 
 export function createGemsService(deps: GemsServiceDeps): GemsService {
@@ -136,6 +144,21 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
       if (!gem || isDeleted(gem)) return { ok: false, reason: "NOT_FOUND" };
       if (gem.sellerId !== sellerId) return { ok: false, reason: "FORBIDDEN" };
       if (gem.status !== "draft") return { ok: false, reason: "GEM_NOT_DRAFT" };
+
+      // Posting-fee gate at the point of going public. Flipping free<->paid is a
+      // pure data change to app_settings — no code change here.
+      if (deps.settings) {
+        const config = await deps.settings.getPostingFee();
+        const fee = await resolvePostingFee(db, config, sellerId);
+        if (fee.required) {
+          return {
+            ok: false,
+            reason: "POSTING_FEE_REQUIRED",
+            fee,
+            paymentIntentRef: `pf_${randomUUID()}`,
+          };
+        }
+      }
 
       const [updated] = await db
         .update(gems)

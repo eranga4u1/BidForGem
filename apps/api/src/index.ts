@@ -24,3 +24,5 @@ export * from "./gems/index.js";
 export * from "./storage/index.js";
 export * from "./auctions/index.js";
 export * from "./notifications/index.js";
+export * from "./settings/index.js";
+export * from "./billing/index.js";

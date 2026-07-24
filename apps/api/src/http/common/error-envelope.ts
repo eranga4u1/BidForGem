@@ -41,6 +41,7 @@ const MESSAGES: Record<string, string> = {
   GEM_NOT_ACTIVE: "The gem must be published first.",
   GEM_NOT_EDITABLE: "This gem can no longer be changed.",
   GEM_NOT_DRAFT: "This gem is not a draft.",
+  POSTING_FEE_REQUIRED: "A posting fee is required to publish this listing.",
   INVALID_TIME_WINDOW: "The auction end must be after its start.",
   RESERVE_BELOW_START: "Reserve price cannot be below the start price.",
   UNSUPPORTED_MEDIA_TYPE: "That file type is not allowed.",
@@ -87,6 +88,7 @@ const STATUS: Record<string, number> = {
   UNSUPPORTED_MEDIA_TYPE: 415,
   FILE_TOO_LARGE: 413,
   MEDIA_LIMIT_REACHED: 409,
+  POSTING_FEE_REQUIRED: 402,
   RATE_LIMITED: 429,
 };
 

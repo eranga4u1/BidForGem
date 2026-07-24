@@ -11,3 +11,4 @@ export * from "./auth.js";
 export * from "./gems.js";
 export * from "./auctions.js";
 export * from "./notifications.js";
+export * from "./billing.js";
