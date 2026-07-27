@@ -2,7 +2,7 @@
 
 import type { PublicUser } from "@gem/types";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { ApiError, authApi, tokenStore } from "./api";
+import { api, GemApiError, refreshSession, tokens } from "./api";
 
 type Status = "loading" | "authenticated" | "anonymous";
 
@@ -13,6 +13,7 @@ interface AuthContextValue {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,63 +22,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [user, setUser] = useState<PublicUser | null>(null);
   const [status, setStatus] = useState<Status>("loading");
 
-  // On mount, restore the session from a stored refresh/access token.
   useEffect(() => {
     let active = true;
-    async function restore(): Promise<void> {
-      if (!tokenStore.refresh && !tokenStore.access) {
+    void (async () => {
+      if (!tokens.refresh) {
+        if (active) setStatus("anonymous");
+        return;
+      }
+      const token = await refreshSession();
+      if (!token) {
         if (active) setStatus("anonymous");
         return;
       }
       try {
-        const { user: me } = await authApi.me();
+        const me = await api.auth.me();
         if (active) {
           setUser(me);
           setStatus("authenticated");
         }
       } catch {
-        tokenStore.clear();
+        tokens.clear();
         if (active) setStatus("anonymous");
       }
-    }
-    void restore();
+    })();
     return () => {
       active = false;
     };
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const res = await authApi.login({ email, password });
-    tokenStore.set(res.tokens);
-    setUser(res.user);
+    const { user: u, tokens: t } = await api.auth.login({ email, password });
+    tokens.set(t);
+    setUser(u);
     setStatus("authenticated");
   }, []);
 
   const register = useCallback(
     async (name: string, email: string, password: string): Promise<void> => {
-      const res = await authApi.register({ name, email, password });
-      tokenStore.set(res.tokens);
-      setUser(res.user);
+      const { user: u, tokens: t } = await api.auth.register({ name, email, password });
+      tokens.set(t);
+      setUser(u);
       setStatus("authenticated");
     },
     [],
   );
 
   const logout = useCallback(async (): Promise<void> => {
-    await authApi.logout();
+    const rt = tokens.refresh;
+    if (rt) await api.auth.logout(rt).catch(() => undefined);
+    tokens.clear();
     setUser(null);
     setStatus("anonymous");
   }, []);
 
   const updateName = useCallback(async (name: string): Promise<void> => {
-    const res = await authApi.updateName(name);
-    const nextUser = "user" in res ? res.user : null;
-    if (nextUser) setUser(nextUser);
+    const u = await api.auth.updateMe(name);
+    setUser(u);
+  }, []);
+
+  const refreshUser = useCallback(async (): Promise<void> => {
+    try {
+      setUser(await api.auth.me());
+    } catch (err) {
+      if (err instanceof GemApiError && err.status === 401) {
+        tokens.clear();
+        setUser(null);
+        setStatus("anonymous");
+      }
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, register, logout, updateName }),
-    [user, status, login, register, logout, updateName],
+    () => ({ user, status, login, register, logout, updateName, refreshUser }),
+    [user, status, login, register, logout, updateName, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -89,4 +106,4 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-export { ApiError };
+export { GemApiError };

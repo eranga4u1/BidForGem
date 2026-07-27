@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth";
+import { AppShell } from "@/components/AppShell";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Gem — Bidding Platform",
-  description: "Create profiles, list gems, and bid in live auctions.",
+  title: "Gem — Live Gem Auctions",
+  description: "Browse vetted gem listings and bid in live, server-timed auctions.",
   applicationName: "Gem",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Gem" },
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#070912",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -27,7 +28,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <div className="app">{children}</div>
+          <AppShell>{children}</AppShell>
         </AuthProvider>
         <ServiceWorker />
       </body>

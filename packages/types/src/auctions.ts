@@ -57,8 +57,8 @@ export const publicAuctionSchema = z.object({
   startPrice: z.number().int(),
   reservePrice: z.number().int().nullable(),
   minIncrement: z.number().int(),
-  startAt: z.date(),
-  endAt: z.date(),
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date(),
   highestBid: z.number().int().nullable(),
   bidCount: z.number().int(),
   antiSnipeWindowSeconds: z.number().int(),
@@ -70,7 +70,7 @@ export type PublicAuction = z.infer<typeof publicAuctionSchema>;
 export const bidHistoryItemSchema = z.object({
   id: z.uuid(),
   amount: z.number().int(),
-  createdAt: z.date(),
+  createdAt: z.coerce.date(),
   bidderDisplayName: z.string(),
 });
 export type BidHistoryItem = z.infer<typeof bidHistoryItemSchema>;

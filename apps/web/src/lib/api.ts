@@ -1,115 +1,94 @@
-import type { AuthTokens, PublicUser } from "@gem/types";
-import { API_BASE_URL } from "./config";
+import { createGemApiClient, GemApiError } from "@gem/api-client";
+import { API_URL } from "./config";
 
-const ACCESS_KEY = "gem.accessToken";
+/**
+ * Token handling: the ACCESS token lives in memory only (lost on reload,
+ * re-derived via refresh) so an XSS payload can't read it from storage. The
+ * long-lived REFRESH token is persisted in localStorage — the API returns
+ * tokens as JSON (no httpOnly-cookie flow), so this is the available option; a
+ * production hardening would move the refresh token to an httpOnly cookie
+ * (requires an API change).
+ */
+let accessToken: string | null = null;
 const REFRESH_KEY = "gem.refreshToken";
 
-export interface AuthSessionResponse {
-  user: PublicUser;
-  tokens: AuthTokens;
+function getRefresh(): string | null {
+  return typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY);
 }
 
-/** A failed API call carrying the server's error reason + any zod issues. */
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly reason: string,
-    readonly issues?: unknown,
-  ) {
-    super(reason);
-    this.name = "ApiError";
-  }
-}
-
-export const tokenStore = {
+export const tokens = {
   get access(): string | null {
-    return typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY);
+    return accessToken;
   },
   get refresh(): string | null {
-    return typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY);
+    return getRefresh();
   },
-  set(tokens: AuthTokens): void {
-    localStorage.setItem(ACCESS_KEY, tokens.accessToken);
-    localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+  set(next: { accessToken: string; refreshToken: string }): void {
+    accessToken = next.accessToken;
+    if (typeof window !== "undefined") localStorage.setItem(REFRESH_KEY, next.refreshToken);
   },
   clear(): void {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    accessToken = null;
+    if (typeof window !== "undefined") localStorage.removeItem(REFRESH_KEY);
   },
 };
 
-interface RequestOptions {
-  method?: string;
-  body?: unknown;
-  auth?: boolean;
-  retry?: boolean;
-}
+let refreshing: Promise<string | null> | null = null;
 
-async function parseError(res: Response): Promise<ApiError> {
-  const data = (await res.json().catch(() => null)) as { error?: string; issues?: unknown } | null;
-  return new ApiError(res.status, data?.error ?? `HTTP_${res.status}`, data?.issues);
-}
-
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, auth = false, retry = true } = options;
-  const headers: Record<string, string> = {};
-  if (body !== undefined) headers["content-type"] = "application/json";
-  if (auth && tokenStore.access) headers.authorization = `Bearer ${tokenStore.access}`;
-
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  // Transparently refresh once on an expired/invalid access token.
-  if (res.status === 401 && auth && retry && tokenStore.refresh) {
-    const refreshed = await tryRefresh();
-    if (refreshed) return request<T>(path, { ...options, retry: false });
-  }
-
-  if (!res.ok) throw await parseError(res);
-  return (await res.json()) as T;
-}
-
-async function tryRefresh(): Promise<boolean> {
-  const refreshToken = tokenStore.refresh;
-  if (!refreshToken) return false;
+async function doRefresh(): Promise<string | null> {
+  const rt = getRefresh();
+  if (!rt) return null;
   try {
-    const res = await request<AuthSessionResponse>("/auth/refresh", {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
-      body: { refreshToken },
-      retry: false,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken: rt }),
     });
-    tokenStore.set(res.tokens);
-    return true;
+    if (!res.ok) {
+      tokens.clear();
+      return null;
+    }
+    const data = (await res.json()) as { tokens: { accessToken: string; refreshToken: string } };
+    tokens.set(data.tokens);
+    return data.tokens.accessToken;
   } catch {
-    tokenStore.clear();
-    return false;
+    return null;
   }
 }
 
-export const authApi = {
-  register(input: { name: string; email: string; password: string }): Promise<AuthSessionResponse> {
-    return request<AuthSessionResponse>("/auth/register", { method: "POST", body: input });
-  },
-  login(input: { email: string; password: string }): Promise<AuthSessionResponse> {
-    return request<AuthSessionResponse>("/auth/login", { method: "POST", body: input });
-  },
-  me(): Promise<{ user: PublicUser }> {
-    return request<{ user: PublicUser }>("/auth/me", { auth: true });
-  },
-  updateName(name: string): Promise<AuthSessionResponse | { ok: true; user: PublicUser }> {
-    return request("/auth/me", { method: "PATCH", body: { name }, auth: true });
-  },
-  async logout(): Promise<void> {
-    const refreshToken = tokenStore.refresh;
-    if (refreshToken) {
-      await request<{ ok: true }>("/auth/logout", {
-        method: "POST",
-        body: { refreshToken },
-      }).catch(() => undefined);
-    }
-    tokenStore.clear();
-  },
+/**
+ * Single-flight refresh. Refresh tokens ROTATE and the server treats a reused
+ * token as theft (revokes the family), so two concurrent refreshes with the same
+ * token would log the user out. We keep the in-flight promise cached for a short
+ * cooldown so a burst of callers (React StrictMode double-invokes effects in dev;
+ * app boot triggers several) collapses into ONE rotation.
+ */
+export function refreshSession(): Promise<string | null> {
+  if (refreshing) return refreshing;
+  refreshing = doRefresh().finally(() => {
+    setTimeout(() => {
+      refreshing = null;
+    }, 2000);
+  });
+  return refreshing;
+}
+
+/** fetch wrapper that transparently refreshes once on a 401 for authed calls. */
+const authedFetch: typeof fetch = async (input, init) => {
+  const res = await fetch(input, init);
+  if (res.status !== 401) return res;
+  const headers = new Headers(init?.headers);
+  if (!headers.has("authorization")) return res; // unauthenticated request
+  const next = await refreshSession();
+  if (!next) return res;
+  headers.set("authorization", `Bearer ${next}`);
+  return fetch(input, { ...init, headers });
 };
+
+export const api = createGemApiClient({
+  baseUrl: API_URL,
+  getAccessToken: () => accessToken,
+  fetch: authedFetch,
+});
+
+export { GemApiError };

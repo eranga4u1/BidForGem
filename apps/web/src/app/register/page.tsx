@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError, useAuth } from "@/lib/auth";
+import { GemApiError, useAuth } from "@/lib/auth";
 
-interface ZodIssue {
+interface Issue {
   message: string;
-  path: (string | number)[];
 }
 
 export default function RegisterPage(): React.ReactElement {
@@ -25,12 +24,15 @@ export default function RegisterPage(): React.ReactElement {
     setBusy(true);
     try {
       await register(name, email, password);
-      router.push("/");
+      router.push("/gems");
     } catch (err) {
-      if (err instanceof ApiError && err.reason === "INVALID_INPUT" && Array.isArray(err.issues)) {
-        const first = (err.issues as ZodIssue[])[0];
-        setError(first?.message ?? "Please check your details.");
-      } else if (err instanceof ApiError && err.reason === "REGISTRATION_FAILED") {
+      if (
+        err instanceof GemApiError &&
+        err.code === "INVALID_INPUT" &&
+        Array.isArray(err.details)
+      ) {
+        setError((err.details as Issue[])[0]?.message ?? "Please check your details.");
+      } else if (err instanceof GemApiError && err.code === "REGISTRATION_FAILED") {
         setError("Could not register with those details.");
       } else {
         setError("Something went wrong. Please try again.");
@@ -41,58 +43,62 @@ export default function RegisterPage(): React.ReactElement {
   }
 
   return (
-    <>
-      <div className="topbar">
-        <div className="brand">
-          <img src="/icon.svg" alt="Gem" />
-          <span>Gem</span>
-        </div>
-      </div>
+    <div className="narrow" style={{ margin: "24px auto 0" }}>
       <div className="card">
         <h1>Create account</h1>
         <p className="muted">Join Gem to list and bid on gems.</p>
-        <form onSubmit={(e) => void onSubmit(e)}>
-          <label htmlFor="name">Name</label>
-          <input
-            id="name"
-            autoComplete="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <p className="muted" style={{ marginTop: 8 }}>
-            At least 12 characters, with a mix of upper/lowercase, digits, or symbols.
-          </p>
-          {error && <div className="error">{error}</div>}
-          <button type="submit" className="btn" disabled={busy}>
+        <form onSubmit={(e) => void onSubmit(e)} style={{ marginTop: 18 }}>
+          <div className="field">
+            <label htmlFor="name">Name</label>
+            <input
+              id="name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <div className="hint">
+              At least 12 characters with a mix of cases, digits, or symbols.
+            </div>
+          </div>
+          {error && (
+            <div className="error" style={{ marginTop: 14 }}>
+              {error}
+            </div>
+          )}
+          <button type="submit" className="btn btn-block" style={{ marginTop: 18 }} disabled={busy}>
             {busy ? "Creating…" : "Create account"}
           </button>
         </form>
-        <p className="center">
+        <p className="muted" style={{ textAlign: "center", marginTop: 16, fontSize: "0.9rem" }}>
           Already have an account?{" "}
-          <Link href="/login" className="link">
+          <Link href="/login" style={{ color: "var(--brand-2)" }}>
             Sign in
           </Link>
         </p>
       </div>
-    </>
+    </div>
   );
 }

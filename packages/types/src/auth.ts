@@ -93,7 +93,7 @@ export const publicUserSchema = z.object({
   email: z.email(),
   role: userRoleSchema,
   verified: z.boolean(),
-  createdAt: z.date(),
+  createdAt: z.coerce.date(),
 });
 export type PublicUser = z.infer<typeof publicUserSchema>;
 

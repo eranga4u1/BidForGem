@@ -18,6 +18,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "dev:server": "tsx src/dev/server.ts",
+    "dev:api": "node --import @swc-node/register/esm-register src/dev/api.ts",
     "seed": "tsx src/db/seed.ts",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
@@ -43,6 +44,7 @@
     "@electric-sql/pglite": "^0.5.4",
     "@gem/config": "workspace:*",
     "@nestjs/testing": "^11.1.28",
+    "@swc-node/register": "^1.12.1",
     "@swc/core": "^1.15.46",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",

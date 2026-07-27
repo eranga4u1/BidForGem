@@ -11,6 +11,7 @@ import { createGemsService } from "../gems/gems-service.js";
 import { createMediaService } from "../gems/media-service.js";
 import { createNotificationsService } from "../notifications/notifications-service.js";
 import { createSettingsService, type SettingsService } from "../settings/settings-service.js";
+import { createLocalStorage } from "../storage/local-provider.js";
 import { createMemoryStorage } from "../storage/memory-provider.js";
 import type { StorageProvider } from "../storage/provider.js";
 import { createS3Storage } from "../storage/s3-provider.js";
@@ -47,6 +48,11 @@ import {
     {
       provide: STORAGE,
       useFactory: () => {
+        if (process.env.STORAGE_DRIVER === "local") {
+          return createLocalStorage({
+            baseUrl: process.env.PUBLIC_API_URL ?? "http://localhost:4000",
+          });
+        }
         if (process.env.STORAGE_DRIVER === "s3") {
           const endpoint = process.env.S3_ENDPOINT;
           return createS3Storage({

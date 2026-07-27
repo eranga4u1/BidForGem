@@ -7,6 +7,7 @@ import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
 import { CommonModule } from "./common/common.module.js";
 import { LoggingInterceptor } from "./common/logging.interceptor.js";
 import { DatabaseModule } from "./database.module.js";
+import { DevStorageModule } from "./dev-storage/dev-storage.module.js";
 import { GemsModule } from "./gems/gems.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
@@ -20,6 +21,7 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
     AuctionsModule,
     NotificationsModule,
     AdminModule,
+    DevStorageModule,
   ],
   controllers: [HealthController],
   providers: [

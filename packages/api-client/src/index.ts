@@ -91,3 +91,5 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     },
   };
 }
+
+export * from "./gem-client.js";

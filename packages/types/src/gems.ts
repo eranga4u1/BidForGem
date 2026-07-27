@@ -86,7 +86,7 @@ export const publicMediaSchema = z.object({
   status: mediaStatusSchema,
   /** Public CDN URL for photos/videos; null for certificates (signed URL only). */
   url: z.string().nullable(),
-  createdAt: z.date(),
+  createdAt: z.coerce.date(),
 });
 export type PublicMedia = z.infer<typeof publicMediaSchema>;
 
@@ -103,7 +103,7 @@ export const publicGemSchema = z.object({
   cut: z.string().nullable(),
   origin: z.string().nullable(),
   status: gemStatusSchema,
-  createdAt: z.date(),
+  createdAt: z.coerce.date(),
   media: z.array(publicMediaSchema),
 });
 export type PublicGem = z.infer<typeof publicGemSchema>;

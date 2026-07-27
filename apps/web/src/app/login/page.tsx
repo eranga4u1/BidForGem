@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError, useAuth } from "@/lib/auth";
+import { GemApiError, useAuth } from "@/lib/auth";
 
 export default function LoginPage(): React.ReactElement {
   const { login } = useAuth();
@@ -19,10 +19,10 @@ export default function LoginPage(): React.ReactElement {
     setBusy(true);
     try {
       await login(email, password);
-      router.push("/");
+      router.push("/gems");
     } catch (err) {
       setError(
-        err instanceof ApiError && err.reason === "INVALID_CREDENTIALS"
+        err instanceof GemApiError && err.code === "INVALID_CREDENTIALS"
           ? "Incorrect email or password."
           : "Something went wrong. Please try again.",
       );
@@ -32,47 +32,49 @@ export default function LoginPage(): React.ReactElement {
   }
 
   return (
-    <>
-      <div className="topbar">
-        <div className="brand">
-          <img src="/icon.svg" alt="Gem" />
-          <span>Gem</span>
-        </div>
-      </div>
+    <div className="narrow" style={{ margin: "24px auto 0" }}>
       <div className="card">
         <h1>Sign in</h1>
-        <p className="muted">Welcome back. Enter your details to continue.</p>
-        <form onSubmit={(e) => void onSubmit(e)}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <div className="error">{error}</div>}
-          <button type="submit" className="btn" disabled={busy}>
+        <p className="muted">Welcome back.</p>
+        <form onSubmit={(e) => void onSubmit(e)} style={{ marginTop: 18 }}>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          {error && (
+            <div className="error" style={{ marginTop: 14 }}>
+              {error}
+            </div>
+          )}
+          <button type="submit" className="btn btn-block" style={{ marginTop: 18 }} disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <p className="center">
+        <p className="muted" style={{ textAlign: "center", marginTop: 16, fontSize: "0.9rem" }}>
           No account?{" "}
-          <Link href="/register" className="link">
+          <Link href="/register" style={{ color: "var(--brand-2)" }}>
             Create one
           </Link>
         </p>
       </div>
-    </>
+    </div>
   );
 }

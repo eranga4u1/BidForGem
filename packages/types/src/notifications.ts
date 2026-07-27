@@ -13,8 +13,8 @@ export const publicNotificationSchema = z.object({
   id: z.uuid(),
   type: notificationTypeSchema,
   payload: z.record(z.string(), z.unknown()),
-  readAt: z.date().nullable(),
-  createdAt: z.date(),
+  readAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
 });
 export type PublicNotification = z.infer<typeof publicNotificationSchema>;
 

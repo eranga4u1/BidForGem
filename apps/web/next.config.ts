@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  // Off: StrictMode double-invokes effects in dev, which would fire the
+  // bootstrap token-refresh twice; rotating refresh tokens treat the second use
+  // as reuse. The single-flight in lib/api still guards concurrent refreshes.
+  reactStrictMode: false,
   // Serve the service worker from the app origin with the right scope/headers.
   async headers() {
     return [
