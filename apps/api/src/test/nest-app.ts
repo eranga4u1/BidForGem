@@ -5,26 +5,34 @@ import { Test } from "@nestjs/testing";
 import type { RateLimiter } from "../auth/rate-limit.js";
 import { AppModule } from "../http/app.module.js";
 import { AUTH_CONFIG, DB, RATE_LIMITER, STORAGE } from "../http/tokens.js";
-import { createMemoryStorage, type MemoryStorage } from "../storage/memory-provider.js";
+import { createMemoryStorage } from "../storage/memory-provider.js";
+import type { StorageProvider } from "../storage/provider.js";
 import { makeTestAuthConfig } from "./auth-helpers.js";
 import { makeTestDb, type AnyDb } from "./harness.js";
 
 export interface TestApi {
   app: INestApplication;
   db: AnyDb;
-  storage: MemoryStorage;
+  storage: StorageProvider;
   /** Base URL (normalized to IPv4) for socket.io-client. */
   url: string;
   close: () => Promise<void>;
 }
 
+export interface MakeTestApiOptions {
+  /** Storage provider to bind; defaults to the in-memory fake. Pass the local
+   *  provider to exercise the real PUT→serve HTTP round-trip. */
+  storage?: StorageProvider;
+}
+
 /**
  * Boot the real Nest app (HTTP + Socket.IO) backed by a fresh PGlite database,
- * an in-memory storage fake, and a cheap auth config. No network/real infra.
+ * a storage provider (in-memory fake by default), and a cheap auth config. No
+ * network/real infra.
  */
-export async function makeTestApi(): Promise<TestApi> {
+export async function makeTestApi(opts: MakeTestApiOptions = {}): Promise<TestApi> {
   const { db, close: closeDb } = await makeTestDb();
-  const storage = createMemoryStorage();
+  const storage = opts.storage ?? createMemoryStorage();
   const config = makeTestAuthConfig();
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
