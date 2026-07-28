@@ -219,7 +219,10 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
           limit: r.limit,
           offset: r.offset,
         })),
-      get: (id) => req(`/gems/${id}`, { schema: gemEnv }).then((r) => r.gem),
+      // Send the token when present: a gem's owner must be able to read their
+      // own draft (drafts are hidden from anonymous viewers). Anonymous callers
+      // simply omit the header and still get public listings.
+      get: (id) => req(`/gems/${id}`, { auth: true, schema: gemEnv }).then((r) => r.gem),
       create: (input) =>
         req("/gems", { method: "POST", body: input, auth: true, schema: gemEnv }).then(
           (r) => r.gem,

@@ -30,7 +30,16 @@ export default function EditGemPage(): React.ReactElement {
   }, [id]);
 
   useEffect(() => {
+    // Wait for auth to resolve: a draft is only readable by its owner, and the
+    // access token is restored asynchronously on a fresh load. Fetching before
+    // then would go out anonymous and 404 the owner's own draft.
+    if (status === "loading") return;
+    if (status === "anonymous") {
+      router.replace("/login");
+      return;
+    }
     let active = true;
+    setPageState("loading");
     api.gems
       .get(id)
       .then((g) => active && (setGem(g), setPageState("ready")))
@@ -38,11 +47,8 @@ export default function EditGemPage(): React.ReactElement {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, status, router]);
 
-  if (status === "anonymous") {
-    router.replace("/login");
-  }
   if (pageState === "loading") {
     return (
       <div className="center-page">
