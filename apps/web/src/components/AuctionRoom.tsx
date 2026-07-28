@@ -50,6 +50,7 @@ export function AuctionRoom({
   const [amount, setAmount] = useState("");
   const [placing, setPlacing] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
+  const [outbid, setOutbid] = useState(false);
 
   const ended =
     auction.status === "closed" || auction.status === "sold" || auction.status === "canceled";
@@ -80,6 +81,8 @@ export function AuctionRoom({
     onConnectionChange: setConnected,
     onSync: () => void sync(),
     onBid: (e) => {
+      // A newer bid changes the minimum — drop any stale "too low" message.
+      setBidError(null);
       setAuction((prev) => ({
         ...prev,
         highestBid: e.highestBid,
@@ -105,6 +108,12 @@ export function AuctionRoom({
         status: e.winnerId ? "sold" : "closed",
         highestBid: e.finalAmount ?? prev.highestBid,
       })),
+    // User-scoped push: the server sends OUTBID to the displaced leader's room.
+    onNotification: (e) => {
+      if (e.type === "OUTBID" && (e.payload as { auctionId?: string }).auctionId === auction.id) {
+        setOutbid(true);
+      }
+    },
   });
 
   async function placeBid(e: React.FormEvent): Promise<void> {
@@ -120,6 +129,7 @@ export function AuctionRoom({
       const updated = await api.auctions.placeBid(auction.id, value);
       setAuction(updated);
       setAmount("");
+      setOutbid(false); // this bidder is the leader again
     } catch (err) {
       // Server is authoritative — roll back and show why.
       setAuction(snapshot);
@@ -199,28 +209,36 @@ export function AuctionRoom({
             ) : isSeller ? (
               <div className="notice">You can’t bid on your own gem.</div>
             ) : (
-              <form onSubmit={(e) => void placeBid(e)}>
-                <label>
-                  Your bid ({auction.currency}) — min {minLabel}
-                </label>
-                <div className="row" style={{ gap: 10 }}>
-                  <input
-                    inputMode="decimal"
-                    placeholder={(minNext / 100).toFixed(2)}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    aria-label="Bid amount"
-                  />
-                  <button className="btn" disabled={placing} type="submit">
-                    {placing ? "Placing…" : "Place bid"}
-                  </button>
-                </div>
-                {bidError && (
-                  <div className="error" style={{ marginTop: 10 }} role="alert">
-                    {bidError}
+              <>
+                {outbid && (
+                  <div className="notice" role="status" style={{ marginBottom: 10 }}>
+                    You’ve been outbid — the current bid is{" "}
+                    {formatMoney(auction.highestBid ?? auction.startPrice, auction.currency)}.
                   </div>
                 )}
-              </form>
+                <form onSubmit={(e) => void placeBid(e)}>
+                  <label>
+                    Your bid ({auction.currency}) — min {minLabel}
+                  </label>
+                  <div className="row" style={{ gap: 10 }}>
+                    <input
+                      inputMode="decimal"
+                      placeholder={(minNext / 100).toFixed(2)}
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      aria-label="Bid amount"
+                    />
+                    <button className="btn" disabled={placing} type="submit">
+                      {placing ? "Placing…" : "Place bid"}
+                    </button>
+                  </div>
+                  {bidError && (
+                    <div className="error" style={{ marginTop: 10 }} role="alert">
+                      {bidError}
+                    </div>
+                  )}
+                </form>
+              </>
             )}
           </div>
 
