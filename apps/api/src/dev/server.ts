@@ -141,7 +141,7 @@ async function main(): Promise<void> {
       case "GET /auth/me": {
         const authed = await authenticate({ db, config }, req.headers.authorization);
         return authed.ok
-          ? send(res, 200, { user: authed.user })
+          ? send(res, 200, { ok: true, user: authed.user })
           : send(res, statusFor(authed.reason), errorBody(authed));
       }
       case "PATCH /auth/me": {

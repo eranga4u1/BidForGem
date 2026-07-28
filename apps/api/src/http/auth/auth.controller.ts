@@ -49,7 +49,7 @@ export class AuthController {
   @Get("me")
   @UseGuards(AuthGuard)
   me(@CurrentUser() user: PublicUser) {
-    return { user };
+    return { ok: true as const, user };
   }
 
   @Patch("me")
