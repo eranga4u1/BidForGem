@@ -158,6 +158,7 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
 
       const conditions = [];
       if (f.status) conditions.push(eq(auctions.status, f.status));
+      if (f.gemId) conditions.push(eq(auctions.gemId, f.gemId));
       if (f.endingBefore) conditions.push(lte(auctions.endAt, f.endingBefore));
       if (f.gemType) conditions.push(eq(gems.type, f.gemType));
 

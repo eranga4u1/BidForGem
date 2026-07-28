@@ -244,4 +244,43 @@ describe("AuctionsService", () => {
       });
     });
   });
+
+  describe("list", () => {
+    it("filters by gemId, returning only that gem's auctions", async () => {
+      const gemA = await insertGem(db, sellerId, { status: "active" });
+      const gemB = await insertGem(db, sellerId, { status: "active" });
+      const aAuction = await insertAuction(db, gemA.id, { status: "active" });
+      await insertAuction(db, gemB.id, { status: "active" });
+
+      const res = await service.list({ gemId: gemA.id });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.items).toHaveLength(1);
+      expect(res.items[0]?.id).toBe(aAuction.id);
+      expect(res.items[0]?.gemId).toBe(gemA.id);
+    });
+
+    it("gemId + status returns the live auction and excludes a terminal one", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      await insertAuction(db, gem.id, { status: "closed" });
+      const live = await insertAuction(db, gem.id, { status: "active" });
+
+      // Both auctions belong to the gem...
+      const all = await service.list({ gemId: gem.id });
+      expect(all.ok && all.items).toHaveLength(2);
+      // ...but the live filter isolates the non-terminal one.
+      const res = await service.list({ gemId: gem.id, status: "active" });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.items.map((a) => a.id)).toEqual([live.id]);
+    });
+
+    it("returns an empty list when the gem has no auction", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const res = await service.list({ gemId: gem.id });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.items).toEqual([]);
+    });
+  });
 });

@@ -54,6 +54,8 @@ export type PlaceBidInputDto = z.infer<typeof placeBidInputSchema>;
 
 export const auctionFilterSchema = z.object({
   status: auctionStatusSchema.optional(),
+  /** All auctions for a single gem (e.g. to resolve a gem's live auction). */
+  gemId: z.uuid().optional(),
   gemType: z.string().trim().optional(),
   /** Only auctions ending at or before this instant (for "ending soon"). */
   endingBefore: z.coerce.date().optional(),
