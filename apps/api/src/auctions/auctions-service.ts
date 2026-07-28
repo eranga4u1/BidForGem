@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import {
   auctionFilterSchema,
   bidHistoryQuerySchema,
@@ -23,7 +23,7 @@ export type CreateAuctionResult =
         | "NOT_GEM_OWNER"
         | "GEM_NOT_ACTIVE"
         | "AUCTION_ALREADY_EXISTS"
-        | "INVALID_TIME_WINDOW"
+        | "START_IN_PAST"
         | "RESERVE_BELOW_START";
     };
 
@@ -56,15 +56,26 @@ export interface AuctionsService {
 
 export interface AuctionsServiceDeps {
   db: Db;
-  now?: () => Date;
 }
 
 export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsService {
   const { db } = deps;
-  const now = deps.now ?? (() => new Date());
 
   const countBids = (auctionId: string): Promise<number> =>
     db.$count(bids, eq(bids.auctionId, auctionId));
+
+  /**
+   * The server's own clock — the DB clock, the SAME source `closeAuction` trusts
+   * to decide when an auction is due. `now()` is constant per statement, so any
+   * present row works as a carrier; the gem we just validated guarantees one.
+   */
+  const databaseNow = async (gemId: string): Promise<Date> => {
+    const [row] = await db
+      .select({ now: sql<Date>`now()` })
+      .from(gems)
+      .where(eq(gems.id, gemId));
+    return row ? new Date(row.now) : new Date();
+  };
 
   return {
     async create(sellerId, rawInput) {
@@ -88,14 +99,26 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
         .limit(1);
       if (existing.length > 0) return { ok: false, reason: "AUCTION_ALREADY_EXISTS" };
 
-      if (input.endAt.getTime() <= input.startAt.getTime()) {
-        return { ok: false, reason: "INVALID_TIME_WINDOW" };
-      }
       if (input.reservePrice !== undefined && input.reservePrice < input.startPrice) {
         return { ok: false, reason: "RESERVE_BELOW_START" };
       }
 
-      const status = input.startAt.getTime() <= now().getTime() ? "active" : "scheduled";
+      // SERVER-authoritative deadline: derive start_at and end_at from the DB
+      // clock, never from a client-supplied instant. `startAt` (if sent) is only
+      // a request the server validates as future; otherwise the auction starts
+      // now. end_at is always start_at + duration.
+      const dbNow = await databaseNow(input.gemId);
+      let startAt: Date;
+      if (input.startAt === undefined) {
+        startAt = dbNow;
+      } else {
+        if (input.startAt.getTime() <= dbNow.getTime()) {
+          return { ok: false, reason: "START_IN_PAST" };
+        }
+        startAt = input.startAt;
+      }
+      const endAt = new Date(startAt.getTime() + input.durationSeconds * 1000);
+      const status = startAt.getTime() <= dbNow.getTime() ? "active" : "scheduled";
 
       const [row] = await db
         .insert(auctions)
@@ -105,8 +128,8 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
           reservePrice: input.reservePrice ?? null,
           minIncrement: input.minIncrement,
           currency: input.currency,
-          startAt: input.startAt,
-          endAt: input.endAt,
+          startAt,
+          endAt,
           status,
           ...(input.antiSnipeWindowSeconds !== undefined
             ? { antiSnipeWindowSeconds: input.antiSnipeWindowSeconds }

@@ -14,15 +14,34 @@ const currencySchema = z
       .regex(/^[A-Z]{3}$/, "Currency must be a 3-letter ISO code"),
   );
 
-/** Money fields are INTEGER minor units — non-integers are rejected here. */
+/** Auction duration bounds, in seconds: 1 minute .. 30 days. */
+export const AUCTION_MIN_DURATION_SECONDS = 60;
+export const AUCTION_MAX_DURATION_SECONDS = 30 * 24 * 60 * 60; // 2,592,000
+
+/**
+ * Money fields are INTEGER minor units — non-integers are rejected here.
+ *
+ * The DEADLINE is server-authoritative. The client sends a bounded
+ * `durationSeconds`, NEVER an absolute `endAt` (a skewed client clock must not be
+ * able to mis-time an auction). `startAt` is OPTIONAL and, when present, is only
+ * a REQUEST the server validates against its own DB clock (must be in the
+ * future) — omit it to start immediately. The server computes both `start_at`
+ * and `end_at` from its DB clock. `endAt` is intentionally absent from this
+ * schema, so any client-supplied value is stripped before it can reach the
+ * domain logic.
+ */
 export const createAuctionInputSchema = z.object({
   gemId: z.uuid(),
   startPrice: z.number().int().nonnegative(),
   reservePrice: z.number().int().nonnegative().optional(),
   minIncrement: z.number().int().positive(),
   currency: currencySchema,
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date(),
+  durationSeconds: z
+    .number()
+    .int()
+    .min(AUCTION_MIN_DURATION_SECONDS)
+    .max(AUCTION_MAX_DURATION_SECONDS),
+  startAt: z.coerce.date().optional(),
   antiSnipeWindowSeconds: z.number().int().nonnegative().optional(),
   antiSnipeExtendSeconds: z.number().int().nonnegative().optional(),
 });

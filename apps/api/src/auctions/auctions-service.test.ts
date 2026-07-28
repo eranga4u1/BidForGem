@@ -1,5 +1,8 @@
+import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { bids } from "../db/schema.js";
+import { AUCTION_MAX_DURATION_SECONDS } from "@gem/types";
+import { placeBid } from "../bidding/place-bid.js";
+import { bids, users } from "../db/schema.js";
 import { insertAuction, insertGem, insertUser, makeTestDb, type AnyDb } from "../test/harness.js";
 import { createAuctionsService, type AuctionsService } from "./auctions-service.js";
 
@@ -28,9 +31,17 @@ describe("AuctionsService", () => {
     startPrice: 1000,
     minIncrement: 100,
     currency: "USD",
-    startAt: new Date(Date.now() - 60_000).toISOString(),
-    endAt: new Date(Date.now() + 3_600_000).toISOString(),
+    durationSeconds: 3600,
   });
+
+  /** The DB clock — the oracle the deadline assertions compare against. */
+  const dbNow = async (): Promise<Date> => {
+    const [row] = await db
+      .select({ now: sql<Date>`now()` })
+      .from(users)
+      .limit(1);
+    return new Date(row!.now);
+  };
 
   describe("create", () => {
     it("creates an active auction for an owned, published gem", async () => {
@@ -77,16 +88,94 @@ describe("AuctionsService", () => {
       });
     });
 
-    it("rejects an invalid time window (end <= start)", async () => {
+    it("computes start_at and end_at from the DB clock (end = start + duration)", async () => {
       const gem = await insertGem(db, sellerId, { status: "active" });
-      const now = Date.now();
-      expect(
-        await service.create(sellerId, {
-          ...baseInput(gem.id),
-          startAt: new Date(now + 7_200_000).toISOString(),
-          endAt: new Date(now + 3_600_000).toISOString(),
-        }),
-      ).toEqual({ ok: false, reason: "INVALID_TIME_WINDOW" });
+      const before = await dbNow();
+      const res = await service.create(sellerId, { ...baseInput(gem.id), durationSeconds: 3600 });
+      const after = await dbNow();
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      // start_at sits between two DB-clock reads — the server clock, not Node's.
+      expect(res.auction.startAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(res.auction.startAt.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(res.auction.endAt.getTime() - res.auction.startAt.getTime()).toBe(3_600_000);
+    });
+
+    it("ignores a client-supplied end_at — the server value always wins", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const bogusEnd = new Date(Date.now() + 999 * 86_400_000).toISOString(); // ~2.7 years out
+      const res = await service.create(sellerId, {
+        ...baseInput(gem.id),
+        durationSeconds: 3600,
+        endAt: bogusEnd, // smuggled: not part of the schema, must not take effect
+      });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.auction.endAt.getTime() - res.auction.startAt.getTime()).toBe(3_600_000);
+      expect(res.auction.endAt.getTime()).toBeLessThan(new Date(bogusEnd).getTime());
+    });
+
+    it("rejects a duration below the minimum", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const res = await service.create(sellerId, { ...baseInput(gem.id), durationSeconds: 59 });
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason).toBe("INVALID_INPUT");
+    });
+
+    it("rejects a duration above the maximum", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const res = await service.create(sellerId, {
+        ...baseInput(gem.id),
+        durationSeconds: AUCTION_MAX_DURATION_SECONDS + 1,
+      });
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason).toBe("INVALID_INPUT");
+    });
+
+    it("rejects a start_at in the past", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const res = await service.create(sellerId, {
+        ...baseInput(gem.id),
+        startAt: new Date(Date.now() - 60_000).toISOString(),
+      });
+      expect(res).toEqual({ ok: false, reason: "START_IN_PAST" });
+    });
+
+    it("schedules an auction when start_at is a valid future instant", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const future = new Date(Date.now() + 3_600_000);
+      const res = await service.create(sellerId, {
+        ...baseInput(gem.id),
+        durationSeconds: 3600,
+        startAt: future.toISOString(),
+      });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.auction.status).toBe("scheduled");
+      expect(res.auction.startAt.getTime()).toBe(future.getTime());
+      expect(res.auction.endAt.getTime() - res.auction.startAt.getTime()).toBe(3_600_000);
+    });
+
+    it("anti-snipe composes with the server-computed deadline", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      // window (120s) > duration (60s), so a bid placed now already lands inside it.
+      const created = await service.create(sellerId, {
+        ...baseInput(gem.id),
+        durationSeconds: 60,
+        antiSnipeWindowSeconds: 120,
+        antiSnipeExtendSeconds: 60,
+      });
+      if (!created.ok) throw new Error("setup failed");
+      const bidder = await insertUser(db, { name: "Bidder" });
+      const res = await placeBid(db, {
+        auctionId: created.auction.id,
+        bidderId: bidder.id,
+        amount: 1000,
+      });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      // The server-computed end_at was extended by exactly the extend window.
+      expect(res.auction.endAt.getTime()).toBe(created.auction.endAt.getTime() + 60_000);
     });
 
     it("rejects a non-integer money amount at the boundary", async () => {

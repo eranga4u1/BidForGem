@@ -386,34 +386,46 @@ function PublishSection({
   );
 }
 
+// Duration presets (seconds). The SERVER computes the deadline from its own
+// clock — the client only chooses how long the auction should run.
+const DURATION_PRESETS: { label: string; seconds: number }[] = [
+  { label: "1 hour", seconds: 3_600 },
+  { label: "6 hours", seconds: 21_600 },
+  { label: "12 hours", seconds: 43_200 },
+  { label: "1 day", seconds: 86_400 },
+  { label: "3 days", seconds: 259_200 },
+  { label: "7 days", seconds: 604_800 },
+  { label: "14 days", seconds: 1_209_600 },
+  { label: "30 days", seconds: 2_592_000 },
+];
+
 function StartAuctionSection({ gem }: { gem: PublicGem }): React.ReactElement {
   const router = useRouter();
   const [f, setF] = useState({
     startPrice: "",
     reserve: "",
     minIncrement: "5",
-    hours: "24",
+    durationSeconds: "86400",
     currency: "USD",
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
   async function start(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const now = Date.now();
     try {
+      // Send a DURATION, never an absolute end_at: the server owns the clock.
       const auction = await api.auctions.create({
         gemId: gem.id,
         startPrice: Math.round(Number(f.startPrice) * 100),
         reservePrice: f.reserve ? Math.round(Number(f.reserve) * 100) : undefined,
         minIncrement: Math.round(Number(f.minIncrement) * 100),
         currency: f.currency,
-        startAt: new Date(now).toISOString(),
-        endAt: new Date(now + Number(f.hours) * 3_600_000).toISOString(),
+        durationSeconds: Number(f.durationSeconds),
       });
       router.push(`/auctions/${auction.id}`);
     } catch (err) {
@@ -466,8 +478,14 @@ function StartAuctionSection({ gem }: { gem: PublicGem }): React.ReactElement {
           />
         </div>
         <div className="field">
-          <label>Duration (hours)</label>
-          <input value={f.hours} onChange={set("hours")} inputMode="numeric" required />
+          <label>Duration</label>
+          <select value={f.durationSeconds} onChange={set("durationSeconds")} required>
+            {DURATION_PRESETS.map((d) => (
+              <option key={d.seconds} value={d.seconds}>
+                {d.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       {error && (

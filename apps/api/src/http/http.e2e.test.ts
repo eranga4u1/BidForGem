@@ -169,7 +169,6 @@ describe("API e2e (HTTP + Socket.IO)", () => {
   it("POST /auctions creates an auction and cancel succeeds with zero bids", async () => {
     const seller = await register();
     const gem = await insertGem(api.db, seller.id, { status: "active" });
-    const now = Date.now();
     const createRes = await http()
       .post("/auctions")
       .set("authorization", `Bearer ${seller.token}`)
@@ -178,8 +177,7 @@ describe("API e2e (HTTP + Socket.IO)", () => {
         startPrice: 1000,
         minIncrement: 100,
         currency: "USD",
-        startAt: new Date(now - 1000).toISOString(),
-        endAt: new Date(now + 3_600_000).toISOString(),
+        durationSeconds: 3600,
       });
     expect(createRes.status).toBe(201);
     const auctionId = (createRes.body as { auction: { id: string } }).auction.id;
