@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { CompositeNotificationDispatcher } from "../notifications/composite-dispatcher.js";
+import { EmailNotifier } from "../notifications/email-notifier.js";
 import { SocketNotificationDispatcher } from "../notifications/socket-dispatcher.js";
 import { NOTIFICATION_DISPATCHER } from "../tokens.js";
 import { AuctionCloserService } from "./auction-closer.service.js";
@@ -10,7 +12,10 @@ import { AuctionsGateway } from "./auctions.gateway.js";
   controllers: [AuctionsController],
   providers: [
     AuctionsGateway,
-    { provide: NOTIFICATION_DISPATCHER, useClass: SocketNotificationDispatcher },
+    // In-app (socket) + email compose into the one dispatcher the app injects.
+    SocketNotificationDispatcher,
+    EmailNotifier,
+    { provide: NOTIFICATION_DISPATCHER, useClass: CompositeNotificationDispatcher },
     AuctionCloserService,
     AuctionScheduler,
   ],

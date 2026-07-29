@@ -25,8 +25,15 @@ export class AuctionCloserService {
       winnerId: result.winnerId,
       finalAmount: result.finalAmount,
     });
+    // Hand the per-user notifications to the dispatcher for delivery (socket +
+    // email). WON already went out live; SOLD/ENDED_NO_SALE now flow through the
+    // same seam so email can attach. LOST stays row-only (not emailed).
     for (const n of result.notifications) {
-      if (n.type === "AUCTION_WON") {
+      if (
+        n.type === "AUCTION_WON" ||
+        n.type === "AUCTION_SOLD" ||
+        n.type === "AUCTION_ENDED_NO_SALE"
+      ) {
         this.dispatcher.userNotification(n.userId, {
           type: n.type,
           payload: n.payload,

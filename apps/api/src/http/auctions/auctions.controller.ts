@@ -12,7 +12,8 @@ import { AuthGuard } from "../common/auth.guard.js";
 import { CurrentUser } from "../common/current-user.decorator.js";
 import { httpForReason } from "../common/error-envelope.js";
 import { unwrap } from "../common/respond.js";
-import { AUCTIONS_SERVICE, DB, RATE_LIMITER } from "../tokens.js";
+import type { NotificationDispatcher } from "../../notifications/dispatcher.js";
+import { AUCTIONS_SERVICE, DB, NOTIFICATION_DISPATCHER, RATE_LIMITER } from "../tokens.js";
 import { AuctionsGateway } from "./auctions.gateway.js";
 
 const BID_PER_USER = { limit: 30, windowMs: 60_000 };
@@ -25,6 +26,7 @@ export class AuctionsController {
     @Inject(DB) private readonly db: Db,
     @Inject(RATE_LIMITER) private readonly rateLimiter: RateLimiter,
     @Inject(AuctionsGateway) private readonly gateway: AuctionsGateway,
+    @Inject(NOTIFICATION_DISPATCHER) private readonly dispatcher: NotificationDispatcher,
   ) {}
 
   @Post()
@@ -108,7 +110,8 @@ export class AuctionsController {
     // User-scoped nudge for the displaced leader (the OUTBID row was persisted
     // inside the placeBid transaction).
     if (result.outbidUserId !== null) {
-      this.gateway.emitToUser(result.outbidUserId, {
+      // Through the dispatcher: same socket push as before, plus an email.
+      this.dispatcher.userNotification(result.outbidUserId, {
         type: "OUTBID",
         payload: { auctionId: id, amount: result.bid.amount },
         createdAt: new Date().toISOString(),

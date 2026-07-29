@@ -6,6 +6,8 @@ import type { AuthConfig } from "../auth/config.js";
 import { loadAuthConfig } from "../auth/config.js";
 import { createInMemoryRateLimiter, type RateLimiter } from "../auth/rate-limit.js";
 import { createPoolDatabase } from "../db/client.js";
+import { createEmailProvider, loadEmailConfig, type EmailConfig } from "../email/index.js";
+import type { EmailProvider } from "../email/provider.js";
 import type { Db } from "../gems/access.js";
 import { createGemsService } from "../gems/gems-service.js";
 import { createMediaService } from "../gems/media-service.js";
@@ -20,6 +22,8 @@ import {
   AUTH_CONFIG,
   AUTH_SERVICE,
   DB,
+  EMAIL_CONFIG,
+  EMAIL_PROVIDER,
   GEMS_SERVICE,
   MEDIA_SERVICE,
   NOTIFICATIONS_SERVICE,
@@ -69,6 +73,12 @@ import {
       },
     },
     { provide: AUTH_CONFIG, useFactory: () => loadAuthConfig() },
+    { provide: EMAIL_CONFIG, useFactory: () => loadEmailConfig() },
+    {
+      provide: EMAIL_PROVIDER,
+      useFactory: (config: EmailConfig) => createEmailProvider(config),
+      inject: [EMAIL_CONFIG],
+    },
     { provide: RATE_LIMITER, useFactory: () => createInMemoryRateLimiter() },
     {
       provide: SETTINGS_SERVICE,
@@ -107,6 +117,8 @@ import {
     DB,
     STORAGE,
     AUTH_CONFIG,
+    EMAIL_CONFIG,
+    EMAIL_PROVIDER,
     RATE_LIMITER,
     AUTH_SERVICE,
     GEMS_SERVICE,
