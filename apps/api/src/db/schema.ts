@@ -191,6 +191,25 @@ export const refreshTokens = pgTable(
   ],
 );
 
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // SHA-256 hash of the opaque token; the raw token is never stored.
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("password_reset_tokens_token_hash_idx").on(t.tokenHash),
+    index("password_reset_tokens_user_id_idx").on(t.userId),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Gem = typeof gems.$inferSelect;
 export type Media = typeof media.$inferSelect;
@@ -199,3 +218,4 @@ export type Bid = typeof bids.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type AppSetting = typeof appSettings.$inferSelect;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;

@@ -10,6 +10,7 @@ export function makeTestAuthConfig(overrides: Partial<AuthConfig> = {}): AuthCon
     jwtIssuer: "gem-api-test",
     accessTokenTtlSeconds: 900,
     refreshTokenTtlSeconds: 60 * 60 * 24 * 30,
+    passwordResetTtlSeconds: 30 * 60,
     argon2: { memoryCost: 8192, timeCost: 1, parallelism: 1 },
     ...overrides,
   };

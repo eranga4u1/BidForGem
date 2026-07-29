@@ -279,4 +279,26 @@ describe("API e2e (HTTP + Socket.IO)", () => {
     expect(new Date(payload.endAt).getTime()).toBe(originalEnd.getTime() + 60_000);
     client.disconnect();
   });
+
+  describe("password reset endpoints", () => {
+    it("forgot-password returns an identical generic 200 for known and unknown emails", async () => {
+      const seller = await register();
+      const known = await http().post("/auth/forgot-password").send({ email: seller.email });
+      const unknown = await http()
+        .post("/auth/forgot-password")
+        .send({ email: `missing-${Date.now()}@test.dev` });
+      expect(known.status).toBe(200);
+      expect(unknown.status).toBe(200);
+      expect(known.body).toEqual({ ok: true });
+      expect(unknown.body).toEqual(known.body);
+    });
+
+    it("reset-password rejects a bad token with a generic 400", async () => {
+      const res = await http()
+        .post("/auth/reset-password")
+        .send({ token: "not-a-real-token", password: "Emerald!Green-99yz" });
+      expect(res.status).toBe(400);
+      expect((res.body as { error: { code: string } }).error.code).toBe("RESET_LINK_INVALID");
+    });
+  });
 });

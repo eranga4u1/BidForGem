@@ -1,9 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import {
+  forgotPasswordInputSchema,
   loginInputSchema,
   refreshInputSchema,
   registerInputSchema,
+  resetPasswordInputSchema,
   updateProfileInputSchema,
   type AuthTokens,
   type PublicUser,
@@ -11,12 +13,23 @@ import {
 } from "@gem/types";
 import type { ZodError } from "zod";
 import type { Schema } from "../db/client.js";
-import { refreshTokens, users } from "../db/schema.js";
+import { passwordResetTokens, refreshTokens, users } from "../db/schema.js";
 import type { AuthConfig } from "./config.js";
 import { getDummyHash, hashPassword, verifyPassword } from "./password.js";
 import type { RateLimiter } from "./rate-limit.js";
 import { toPublicUser } from "./mappers.js";
-import { generateRefreshToken, hashRefreshToken, signAccessToken } from "./tokens.js";
+import {
+  generateOpaqueToken,
+  generateRefreshToken,
+  hashOpaqueToken,
+  hashRefreshToken,
+  signAccessToken,
+} from "./tokens.js";
+
+/** Sends the reset email out-of-band; the raw token is passed for the link. */
+export interface PasswordResetMailer {
+  sendResetEmail(params: { to: string; name: string; token: string }): Promise<void>;
+}
 
 /** Per-request metadata used for rate-limit keys and refresh-token auditing. */
 export interface RequestContext {
@@ -49,6 +62,16 @@ export type UpdateProfileResult =
   | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues }
   | { ok: false; reason: "USER_NOT_FOUND" };
 
+/** Always-generic on the exists/not-exists axis — never leaks account existence. */
+export type ForgotPasswordResult =
+  { ok: true } | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues };
+
+export type ResetPasswordResult =
+  | { ok: true }
+  | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues }
+  // One opaque reason for unknown / expired / already-used — no oracle.
+  | { ok: false; reason: "RESET_LINK_INVALID" };
+
 // Rate-limit budgets (requests per window). Deliberately conservative.
 const LIMITS = {
   registerPerIp: { limit: 10, windowMs: 60 * 60 * 1000 },
@@ -61,6 +84,8 @@ export interface AuthServiceDeps<T extends PgQueryResultHKT> {
   db: PgDatabase<T, Schema>;
   config: AuthConfig;
   rateLimiter?: RateLimiter;
+  /** Delivers reset emails. Absent in contexts that don't send (some tests). */
+  passwordResetMailer?: PasswordResetMailer;
   /** Injectable clock for deterministic tests. */
   now?: () => Date;
 }
@@ -71,6 +96,8 @@ export interface AuthService {
   refresh(input: unknown, ctx?: RequestContext): Promise<RefreshResult>;
   logout(input: unknown): Promise<{ ok: true }>;
   updateProfile(userId: string, input: unknown): Promise<UpdateProfileResult>;
+  forgotPassword(input: unknown, ctx?: RequestContext): Promise<ForgotPasswordResult>;
+  resetPassword(input: unknown): Promise<ResetPasswordResult>;
 }
 
 export function createAuthService<T extends PgQueryResultHKT>(
@@ -244,6 +271,68 @@ export function createAuthService<T extends PgQueryResultHKT>(
         .returning();
       if (!updated) return { ok: false, reason: "USER_NOT_FOUND" };
       return { ok: true, user: toPublicUser(updated) };
+    },
+
+    async forgotPassword(rawInput) {
+      const parsed = forgotPasswordInputSchema.safeParse(rawInput);
+      if (!parsed.success)
+        return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
+      const { email } = parsed.data;
+
+      // Same lookup on both paths; the response below is IDENTICAL whether or
+      // not the account exists — no enumeration via body or status. The email
+      // send is delegated (fire-and-forget at the wiring) so response timing
+      // does not leak existence either.
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (user && deps.passwordResetMailer) {
+        const { token, tokenHash } = generateOpaqueToken();
+        const expiresAt = new Date(now().getTime() + config.passwordResetTtlSeconds * 1000);
+        await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });
+        await deps.passwordResetMailer.sendResetEmail({ to: user.email, name: user.name, token });
+      }
+      return { ok: true };
+    },
+
+    async resetPassword(rawInput) {
+      const parsed = resetPasswordInputSchema.safeParse(rawInput);
+      if (!parsed.success)
+        return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
+      const { token, password } = parsed.data;
+      const tokenHash = hashOpaqueToken(token);
+
+      return db.transaction(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(passwordResetTokens)
+          .where(eq(passwordResetTokens.tokenHash, tokenHash))
+          .limit(1);
+
+        // Unknown, already-used, or expired all collapse to one opaque reason.
+        if (!row || row.usedAt !== null || row.expiresAt.getTime() <= now().getTime()) {
+          return { ok: false, reason: "RESET_LINK_INVALID" };
+        }
+
+        const passwordHash = await hashPassword(config.argon2, password);
+        await tx.update(users).set({ passwordHash }).where(eq(users.id, row.userId));
+
+        // Single-use + invalidate this user's OTHER outstanding reset tokens in
+        // one update (mark every not-yet-used token used).
+        await tx
+          .update(passwordResetTokens)
+          .set({ usedAt: now() })
+          .where(
+            and(eq(passwordResetTokens.userId, row.userId), isNull(passwordResetTokens.usedAt)),
+          );
+
+        // A reset may mean the account was compromised: revoke ALL refresh
+        // tokens so every existing session must re-authenticate.
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: now() })
+          .where(and(eq(refreshTokens.userId, row.userId), isNull(refreshTokens.revokedAt)));
+
+        return { ok: true };
+      });
     },
   };
 }

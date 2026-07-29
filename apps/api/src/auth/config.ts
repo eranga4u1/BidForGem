@@ -12,6 +12,8 @@ export interface AuthConfig {
   jwtIssuer: string;
   accessTokenTtlSeconds: number;
   refreshTokenTtlSeconds: number;
+  /** Lifetime of an emailed password-reset token (short-lived, single-use). */
+  passwordResetTtlSeconds: number;
   argon2: Argon2Params;
 }
 
@@ -35,6 +37,11 @@ const authEnvSchema = z.object({
     .int()
     .positive()
     .default(30 * DAY),
+  PASSWORD_RESET_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(30 * 60),
   ARGON2_MEMORY_COST: z.coerce.number().int().positive().default(19456),
   ARGON2_TIME_COST: z.coerce.number().int().positive().default(2),
   ARGON2_PARALLELISM: z.coerce.number().int().positive().default(1),
@@ -58,6 +65,7 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
     jwtIssuer: e.JWT_ISSUER,
     accessTokenTtlSeconds: e.ACCESS_TOKEN_TTL_SECONDS,
     refreshTokenTtlSeconds: e.REFRESH_TOKEN_TTL_SECONDS,
+    passwordResetTtlSeconds: e.PASSWORD_RESET_TTL_SECONDS,
     argon2: {
       memoryCost: e.ARGON2_MEMORY_COST,
       timeCost: e.ARGON2_TIME_COST,

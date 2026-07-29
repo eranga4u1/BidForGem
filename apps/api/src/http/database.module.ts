@@ -6,7 +6,12 @@ import type { AuthConfig } from "../auth/config.js";
 import { loadAuthConfig } from "../auth/config.js";
 import { createInMemoryRateLimiter, type RateLimiter } from "../auth/rate-limit.js";
 import { createPoolDatabase } from "../db/client.js";
-import { createEmailProvider, loadEmailConfig, type EmailConfig } from "../email/index.js";
+import {
+  createEmailProvider,
+  loadEmailConfig,
+  passwordResetEmail,
+  type EmailConfig,
+} from "../email/index.js";
 import type { EmailProvider } from "../email/provider.js";
 import type { Db } from "../gems/access.js";
 import { createGemsService } from "../gems/gems-service.js";
@@ -88,9 +93,30 @@ import {
     },
     {
       provide: AUTH_SERVICE,
-      useFactory: (db: Db, config: AuthConfig, rateLimiter: RateLimiter) =>
-        createAuthService({ db, config, rateLimiter }),
-      inject: [DB, AUTH_CONFIG, RATE_LIMITER],
+      useFactory: (
+        db: Db,
+        config: AuthConfig,
+        rateLimiter: RateLimiter,
+        emailProvider: EmailProvider,
+        emailConfig: EmailConfig,
+      ) =>
+        createAuthService({
+          db,
+          config,
+          rateLimiter,
+          passwordResetMailer: {
+            sendResetEmail: ({ to, name, token }) => {
+              const resetUrl = `${emailConfig.appBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+              // Fire-and-forget: the request path must not wait on the network,
+              // so response timing can't leak whether the account exists.
+              void emailProvider
+                .sendEmail({ to, ...passwordResetEmail({ name, resetUrl }) })
+                .catch(() => undefined);
+              return Promise.resolve();
+            },
+          },
+        }),
+      inject: [DB, AUTH_CONFIG, RATE_LIMITER, EMAIL_PROVIDER, EMAIL_CONFIG],
     },
     {
       provide: GEMS_SERVICE,

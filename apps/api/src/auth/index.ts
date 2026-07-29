@@ -8,6 +8,9 @@ export {
   type LoginResult,
   type RefreshResult,
   type UpdateProfileResult,
+  type ForgotPasswordResult,
+  type ResetPasswordResult,
+  type PasswordResetMailer,
 } from "./auth-service.js";
 export {
   authenticate,
@@ -19,7 +22,9 @@ export {
   signAccessToken,
   verifyAccessToken,
   generateRefreshToken,
+  generateOpaqueToken,
   hashRefreshToken,
+  hashOpaqueToken,
   type AccessTokenClaims,
 } from "./tokens.js";
 export { hashPassword, verifyPassword } from "./password.js";

@@ -63,13 +63,21 @@ export async function verifyAccessToken(
   }
 }
 
-/** Create a new opaque refresh token and its storage hash. */
-export function generateRefreshToken(): { token: string; tokenHash: string } {
+/** Create a high-entropy opaque token and its SHA-256 storage hash. */
+export function generateOpaqueToken(): { token: string; tokenHash: string } {
   const token = randomBytes(32).toString("base64url");
-  return { token, tokenHash: hashRefreshToken(token) };
+  return { token, tokenHash: hashOpaqueToken(token) };
 }
 
-/** Hash an opaque refresh token for storage/lookup (fast; token is high-entropy). */
-export function hashRefreshToken(token: string): string {
+/** Create a new opaque refresh token and its storage hash. */
+export function generateRefreshToken(): { token: string; tokenHash: string } {
+  return generateOpaqueToken();
+}
+
+/** Hash an opaque token for storage/lookup (fast; the token is high-entropy). */
+export function hashOpaqueToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
+
+/** Back-compat alias — refresh tokens hash the same way as any opaque token. */
+export const hashRefreshToken = hashOpaqueToken;

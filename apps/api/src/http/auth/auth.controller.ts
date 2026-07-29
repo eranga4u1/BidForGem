@@ -46,6 +46,22 @@ export class AuthController {
     return this.auth.logout(body);
   }
 
+  /**
+   * Always returns the same generic success for a well-formed email, whether or
+   * not an account exists (no enumeration). Malformed input is a 400.
+   */
+  @Post("forgot-password")
+  @HttpCode(200)
+  async forgotPassword(@Body() body: unknown, @Req() req: Request) {
+    return unwrap(await this.auth.forgotPassword(body, ctxFrom(req)));
+  }
+
+  @Post("reset-password")
+  @HttpCode(200)
+  async resetPassword(@Body() body: unknown) {
+    return unwrap(await this.auth.resetPassword(body));
+  }
+
   @Get("me")
   @UseGuards(AuthGuard)
   me(@CurrentUser() user: PublicUser) {

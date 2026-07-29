@@ -79,6 +79,18 @@ export const updateProfileInputSchema = z.object({
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;
 
+export const forgotPasswordInputSchema = z.object({
+  email: emailSchema,
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>;
+
+/** Reset consumes an opaque token and sets a new password (same policy as register). */
+export const resetPasswordInputSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: passwordSchema,
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
+
 /** Roles a user can hold. Mirrors the DB enum. */
 export const userRoleSchema = z.enum(["user", "admin"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
