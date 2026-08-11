@@ -2,15 +2,22 @@ packages:
   - "apps/*"
   - "packages/*"
 
-# Build-script approval. esbuild fetches its platform binary (Vitest/tsx);
-# @embedded-postgres/* extracts the real PostgreSQL binaries for the Docker-free
-# concurrency test. sharp is not needed (the web app uses plain <img>, not
-# next/image), so its native build is declined.
+# Build-script approval (pnpm's `allowBuilds`). Only these dependencies may run
+# install scripts; everything else is skipped. esbuild / @swc/core build the
+# dev+test toolchain (Vitest, tsx, @swc-node); @embedded-postgres/* hydrates the
+# bundled PostgreSQL binaries for the Docker-free DB tests and the dev:api
+# embedded fallback. Listed PER PLATFORM so a fresh install works on Linux
+# (CI / Render deploy), macOS, and Windows alike — the previous windows-only
+# entry made a Linux install trip the build-script gate. The production API
+# build installs with `--ignore-scripts` and needs none of these.
 allowBuilds:
   esbuild: true
-  "@embedded-postgres/windows-x64": true
-  sharp: false
   "@swc/core": true
+  "@embedded-postgres/linux-x64": true
+  "@embedded-postgres/linux-arm64": true
+  "@embedded-postgres/darwin-x64": true
+  "@embedded-postgres/darwin-arm64": true
+  "@embedded-postgres/windows-x64": true
 
 minimumReleaseAgeExclude:
   - "@aws-sdk/client-s3@3.1093.0"
