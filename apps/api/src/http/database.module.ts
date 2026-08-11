@@ -64,14 +64,30 @@ import {
         }
         if (process.env.STORAGE_DRIVER === "s3") {
           const endpoint = process.env.S3_ENDPOINT;
+          const accessKeyId = process.env.S3_ACCESS_KEY_ID;
+          const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+          const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL;
+          // Fail fast at boot rather than serving with broken/anonymous storage.
+          if (!accessKeyId || !secretAccessKey || !publicBaseUrl) {
+            const missing = [
+              !accessKeyId && "S3_ACCESS_KEY_ID",
+              !secretAccessKey && "S3_SECRET_ACCESS_KEY",
+              !publicBaseUrl && "S3_PUBLIC_BASE_URL",
+            ].filter(Boolean);
+            throw new Error(`STORAGE_DRIVER=s3 requires: ${missing.join(", ")}`);
+          }
+          // R2 works with the default (virtual-hosted) addressing; flip this to
+          // "true" only if presigned URLs fail with a host/DNS error.
+          const forcePathStyle = /^(true|1)$/i.test(process.env.S3_FORCE_PATH_STYLE ?? "");
           return createS3Storage({
             region: process.env.S3_REGION ?? "auto",
             ...(endpoint ? { endpoint } : {}),
-            accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
-            secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
+            accessKeyId,
+            secretAccessKey,
             publicBucket: process.env.S3_PUBLIC_BUCKET ?? "gem-public",
             privateBucket: process.env.S3_PRIVATE_BUCKET ?? "gem-private",
-            publicBaseUrl: process.env.S3_PUBLIC_BASE_URL ?? "https://cdn.example",
+            publicBaseUrl,
+            forcePathStyle,
           });
         }
         return createMemoryStorage();
