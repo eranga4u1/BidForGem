@@ -63,11 +63,16 @@ describe("EmailNotifier", () => {
 
 describe("CompositeNotificationDispatcher", () => {
   it("keeps in-app (socket) delivery and ADDS email", () => {
+    // Hold the mocks in locals so assertions don't reference interface methods
+    // as unbound values (@typescript-eslint/unbound-method).
+    const socketUserNotification = vi.fn();
+    const socketAuctionClosed = vi.fn();
+    const emailerNotify = vi.fn().mockResolvedValue(undefined);
     const socket = {
-      auctionClosed: vi.fn(),
-      userNotification: vi.fn(),
+      auctionClosed: socketAuctionClosed,
+      userNotification: socketUserNotification,
     } as unknown as SocketNotificationDispatcher;
-    const emailer = { notify: vi.fn().mockResolvedValue(undefined) } as unknown as EmailNotifier;
+    const emailer = { notify: emailerNotify } as unknown as EmailNotifier;
     const composite = new CompositeNotificationDispatcher(socket, emailer);
 
     const ev: UserNotificationEvent = {
@@ -76,11 +81,11 @@ describe("CompositeNotificationDispatcher", () => {
       createdAt: new Date().toISOString(),
     };
     composite.userNotification("u1", ev);
-    expect(socket.userNotification).toHaveBeenCalledWith("u1", ev); // in-app, unchanged
-    expect(emailer.notify).toHaveBeenCalledWith("u1", ev); // email, additive
+    expect(socketUserNotification).toHaveBeenCalledWith("u1", ev); // in-app, unchanged
+    expect(emailerNotify).toHaveBeenCalledWith("u1", ev); // email, additive
 
     const closed: AuctionClosedEvent = { auctionId: "a1", winnerId: "u1", finalAmount: 100 };
     composite.auctionClosed(closed);
-    expect(socket.auctionClosed).toHaveBeenCalledWith(closed);
+    expect(socketAuctionClosed).toHaveBeenCalledWith(closed);
   });
 });

@@ -40,7 +40,7 @@ export function notificationEmail(
 ): RenderedEmail | null {
   if (!EMAILABLE.has(event.type)) return null;
 
-  const auctionId = String(event.payload.auctionId ?? "");
+  const auctionId = typeof event.payload.auctionId === "string" ? event.payload.auctionId : "";
   const link = `${opts.appBaseUrl}/auctions/${auctionId}`;
   const amount = money(event.payload.finalAmount ?? event.payload.amount);
   const hi = `Hi ${opts.name},`;
