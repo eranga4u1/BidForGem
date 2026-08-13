@@ -3,7 +3,7 @@ import { GemApiError } from "@gem/api-client";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-// Capture the socket handlers so tests can drive events; mock the API layer.
+// //Capture the socket handlers so tests can drive events; mock the API layer.
 const store = vi.hoisted(() => ({
   handlers: { current: null as null | Record<string, (e: unknown) => void> },
   placeBid: vi.fn(),
