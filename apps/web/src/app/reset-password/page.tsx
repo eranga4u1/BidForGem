@@ -32,7 +32,7 @@ function ResetPasswordForm(): React.ReactElement {
         const detail = Array.isArray(err.details)
           ? (err.details[0] as { message?: string } | undefined)?.message
           : undefined;
-        setError(detail ?? "Please choose a stronger password (at least 12 characters).");
+        setError(detail ?? "Please choose a stronger password (at least 8 characters).");
       } else {
         setError("Couldn’t reset your password. Please try again.");
       }
