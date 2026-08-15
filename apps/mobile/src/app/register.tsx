@@ -59,7 +59,7 @@ export default function RegisterScreen(): React.ReactElement {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="At least 12 characters"
+          placeholder="At least 8 characters"
           placeholderTextColor={theme.faint}
         />
         {error && <Text style={s.error}>{error}</Text>}

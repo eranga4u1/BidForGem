@@ -80,7 +80,7 @@ export default function RegisterPage(): React.ReactElement {
               required
             />
             <div className="hint">
-              At least 12 characters with a mix of cases, digits, or symbols.
+              At least 8 characters with a mix of cases, digits, or symbols.
             </div>
           </div>
           {error && (

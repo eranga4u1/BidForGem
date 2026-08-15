@@ -5,7 +5,7 @@ import { z } from "zod";
  * shapes crossing the API boundary (imported by web, mobile, and the api).
  */
 
-export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 200;
 
 /** A small blocklist of trivially weak passwords / substrings. */
