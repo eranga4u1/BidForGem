@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { InstallButton } from "./InstallButton";
 
 function NavLink({ href, label }: { href: string; label: string }): React.ReactElement {
   const pathname = usePathname();
@@ -60,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
             )}
           </nav>
           <div className="nav-spacer" />
+          <InstallButton />
           {status === "loading" ? (
             <span className="spinner" />
           ) : status === "authenticated" && user ? (

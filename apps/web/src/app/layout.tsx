@@ -9,7 +9,14 @@ export const metadata: Metadata = {
   description: "Browse vetted gem listings and bid in live, server-timed auctions.",
   applicationName: "Gem",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Gem" },
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
