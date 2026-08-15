@@ -93,6 +93,8 @@ export interface GemApiClient {
     logout(refreshToken: string): Promise<void>;
     me(): Promise<PublicUser>;
     updateMe(name: string): Promise<PublicUser>;
+    forgotPassword(email: string): Promise<void>;
+    resetPassword(token: string, password: string): Promise<void>;
   };
   gems: {
     list(filter?: Query): Promise<{ items: PublicGem[]; limit: number; offset: number }>;
@@ -211,6 +213,16 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
         req("/auth/me", { method: "PATCH", body: { name }, auth: true, schema: userEnv }).then(
           (r) => r.user,
         ),
+      forgotPassword: (email) =>
+        req("/auth/forgot-password", { method: "POST", body: { email }, schema: okEnv }).then(
+          () => undefined,
+        ),
+      resetPassword: (token, password) =>
+        req("/auth/reset-password", {
+          method: "POST",
+          body: { token, password },
+          schema: okEnv,
+        }).then(() => undefined),
     },
     gems: {
       list: (filter) =>

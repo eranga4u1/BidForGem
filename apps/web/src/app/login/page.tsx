@@ -68,7 +68,12 @@ export default function LoginPage(): React.ReactElement {
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <p className="muted" style={{ textAlign: "center", marginTop: 16, fontSize: "0.9rem" }}>
+        <p className="muted" style={{ textAlign: "center", marginTop: 14, fontSize: "0.9rem" }}>
+          <Link href="/forgot-password" style={{ color: "var(--brand-2)" }}>
+            Forgot your password?
+          </Link>
+        </p>
+        <p className="muted" style={{ textAlign: "center", marginTop: 6, fontSize: "0.9rem" }}>
           No account?{" "}
           <Link href="/register" style={{ color: "var(--brand-2)" }}>
             Create one
