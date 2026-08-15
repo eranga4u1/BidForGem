@@ -34,7 +34,7 @@ export function InstallButton(): React.ReactElement | null {
   return (
     <button
       type="button"
-      className="btn btn-ghost"
+      className="btn btn-ghost btn-sm"
       onClick={() => {
         void deferred.prompt();
         setDeferred(null);
