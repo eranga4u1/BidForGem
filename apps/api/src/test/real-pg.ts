@@ -5,6 +5,17 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { createPoolDatabase, type Schema } from "../db/client.js";
 
+/**
+ * Swallow errors emitted by idle pool clients. During teardown `epg.stop()`
+ * fast-shutdowns the server, which terminates any lingering connection with a
+ * FATAL (57P01); pg surfaces that as a pool `error` event. Without a listener
+ * Node would treat it as an uncaught exception and fail an otherwise-green run.
+ * There is nothing to recover here — the pool is being torn down.
+ */
+function ignorePoolError(): void {
+  /* intentionally empty */
+}
+
 export interface RealPg {
   db: NodePgDatabase<Schema>;
   pool: pg.Pool;
@@ -24,6 +35,7 @@ export async function startRealPg(): Promise<RealPg | null> {
   const externalUrl = process.env.DATABASE_URL;
   if (externalUrl) {
     const pool = new pg.Pool({ connectionString: externalUrl, max: 16 });
+    pool.on("error", ignorePoolError);
     const { db } = createPoolDatabase(pool);
     return {
       db,
@@ -59,6 +71,7 @@ export async function startRealPg(): Promise<RealPg | null> {
       database: "gem_test",
       max: 16,
     });
+    pool.on("error", ignorePoolError);
     const { db } = createPoolDatabase(pool);
 
     return {
