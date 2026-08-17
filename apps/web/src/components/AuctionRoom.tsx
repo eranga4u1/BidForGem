@@ -144,10 +144,7 @@ export function AuctionRoom({
       <Link href={`/gems/${gem.id}`} className="faint">
         ← {gem.title}
       </Link>
-      <div
-        className="grid-2"
-        style={{ gridTemplateColumns: "1.1fr 1fr", alignItems: "start", gap: 24 }}
-      >
+      <div className="detail-layout">
         <MediaGallery gemId={gem.id} media={gem.media} authenticated={Boolean(user)} />
 
         <div className="stack">

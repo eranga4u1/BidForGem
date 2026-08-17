@@ -61,14 +61,30 @@ a {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 20px;
+  /* Respect the notch/rounded corners in installed (standalone) PWA mode. */
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
 }
 .narrow {
   max-width: 560px;
 }
 .main {
   flex: 1;
-  padding: 28px 0 72px;
+  padding: 28px 0 calc(72px + env(safe-area-inset-bottom));
+}
+
+/* Two-column detail pages (auction room, gem detail) that stack on mobile. */
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
 }
 
 /* Top nav */
@@ -79,6 +95,8 @@ a {
   backdrop-filter: blur(12px);
   background: linear-gradient(180deg, rgba(7, 9, 18, 0.9), rgba(7, 9, 18, 0.55));
   border-bottom: 1px solid var(--border);
+  /* Clear the status bar / notch when installed as a standalone PWA. */
+  padding-top: env(safe-area-inset-top);
 }
 .nav-inner {
   height: 62px;
