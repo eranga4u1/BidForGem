@@ -64,10 +64,7 @@ export default function GemDetailPage(): React.ReactElement {
       <Link href="/gems" className="faint">
         ← Back to browse
       </Link>
-      <div
-        className="grid-2"
-        style={{ gridTemplateColumns: "1.15fr 1fr", alignItems: "start", gap: 24 }}
-      >
+      <div className="detail-layout">
         <MediaGallery gemId={gem.id} media={gem.media} authenticated={Boolean(user)} />
         <div className="stack">
           <div>
