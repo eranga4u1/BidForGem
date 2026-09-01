@@ -226,4 +226,36 @@ describe("AuthService", () => {
       expect(attempts[5]).toEqual({ ok: false, reason: "RATE_LIMITED" });
     });
   });
+
+  describe("deleteAccount", () => {
+    it("rejects a wrong password and leaves the account usable", async () => {
+      const { user } = await register("del1@example.com", "Del One");
+      const res = await auth.deleteAccount(user.id, { password: "Wrong!Password-99" });
+      expect(res).toEqual({ ok: false, reason: "INVALID_CREDENTIALS" });
+
+      // Untouched: the user can still log in.
+      const login = await auth.login({ email: "del1@example.com", password: VALID_PASSWORD });
+      expect(login.ok).toBe(true);
+    });
+
+    it("anonymizes the account, revokes sessions, and blocks future login", async () => {
+      const { user, tokens } = await register("del2@example.com", "Del Two");
+      const res = await auth.deleteAccount(user.id, { password: VALID_PASSWORD });
+      expect(res).toEqual({ ok: true });
+
+      // PII scrubbed; row retained for referential integrity.
+      const [row] = await db.select().from(users).where(eq(users.id, user.id));
+      expect(row?.name).toBe("Deleted user");
+      expect(row?.email).toBe(`deleted+${user.id}@deleted.invalid`);
+      expect(row?.verified).toBe(false);
+
+      // Old email no longer resolves to a login.
+      const login = await auth.login({ email: "del2@example.com", password: VALID_PASSWORD });
+      expect(login).toMatchObject({ ok: false });
+
+      // Existing refresh tokens are revoked (session ended everywhere).
+      const refresh = await auth.refresh({ refreshToken: tokens.refreshToken });
+      expect(refresh.ok).toBe(false);
+    });
+  });
 });

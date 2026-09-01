@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import {
+  deleteAccountInputSchema,
   forgotPasswordInputSchema,
   loginInputSchema,
   refreshInputSchema,
@@ -62,6 +63,11 @@ export type UpdateProfileResult =
   | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues }
   | { ok: false; reason: "USER_NOT_FOUND" };
 
+export type DeleteAccountResult =
+  | { ok: true }
+  | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues }
+  | { ok: false; reason: "INVALID_CREDENTIALS" | "USER_NOT_FOUND" };
+
 /** Always-generic on the exists/not-exists axis — never leaks account existence. */
 export type ForgotPasswordResult =
   { ok: true } | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues };
@@ -96,6 +102,7 @@ export interface AuthService {
   refresh(input: unknown, ctx?: RequestContext): Promise<RefreshResult>;
   logout(input: unknown): Promise<{ ok: true }>;
   updateProfile(userId: string, input: unknown): Promise<UpdateProfileResult>;
+  deleteAccount(userId: string, input: unknown): Promise<DeleteAccountResult>;
   forgotPassword(input: unknown, ctx?: RequestContext): Promise<ForgotPasswordResult>;
   resetPassword(input: unknown): Promise<ResetPasswordResult>;
 }
@@ -271,6 +278,45 @@ export function createAuthService<T extends PgQueryResultHKT>(
         .returning();
       if (!updated) return { ok: false, reason: "USER_NOT_FOUND" };
       return { ok: true, user: toPublicUser(updated) };
+    },
+
+    async deleteAccount(userId, rawInput) {
+      const parsed = deleteAccountInputSchema.safeParse(rawInput);
+      if (!parsed.success)
+        return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!user) return { ok: false, reason: "USER_NOT_FOUND" };
+
+      // Re-authenticate: deleting an account is destructive and must not be
+      // possible from a stolen access token alone.
+      const valid = await verifyPassword(user.passwordHash, parsed.data.password);
+      if (!valid) return { ok: false, reason: "INVALID_CREDENTIALS" };
+
+      // ANONYMIZE rather than hard-delete: gems.seller_id and bids.bidder_id
+      // reference users without ON DELETE CASCADE, so a hard delete would either
+      // fail or destroy other bidders' history. We scrub all PII, lock the login
+      // with an unusable password hash, and revoke every session. The row stays
+      // so auction/bid records keep their referential integrity, displayed as
+      // "Deleted user".
+      const lockedHash = await hashPassword(config.argon2, generateOpaqueToken().token);
+      await db.transaction(async (tx) => {
+        await tx
+          .update(users)
+          .set({
+            name: "Deleted user",
+            email: `deleted+${user.id}@deleted.invalid`,
+            passwordHash: lockedHash,
+            verified: false,
+          })
+          .where(eq(users.id, userId));
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: now() })
+          .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
+        await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+      });
+      return { ok: true };
     },
 
     async forgotPassword(rawInput) {

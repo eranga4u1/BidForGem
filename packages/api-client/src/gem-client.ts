@@ -67,6 +67,8 @@ export interface GemApiClient {
     me(opts?: RequestOptions): Promise<PublicUser>;
     updateMe(name: string, opts?: RequestOptions): Promise<PublicUser>;
     logout(opts?: RequestOptions): Promise<void>;
+    /** Permanently delete the account (requires the password); clears local session. */
+    deleteAccount(password: string, opts?: RequestOptions): Promise<void>;
     forgotPassword(email: string, opts?: RequestOptions): Promise<void>;
     resetPassword(token: string, password: string, opts?: RequestOptions): Promise<void>;
   };
@@ -307,6 +309,18 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
             signal: opts?.signal,
           }).catch(() => undefined);
         }
+        accessToken = null;
+        await storage.clear();
+      },
+      deleteAccount: async (password, opts) => {
+        await request({
+          method: "DELETE",
+          path: "/auth/me",
+          body: { password },
+          schema: okResponseSchema,
+          auth: "required",
+          signal: opts?.signal,
+        });
         accessToken = null;
         await storage.clear();
       },

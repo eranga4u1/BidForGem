@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Inject,
@@ -92,5 +93,12 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async updateMe(@CurrentUser() user: PublicUser, @Body() body: unknown) {
     return unwrap(await this.auth.updateProfile(user.id, body));
+  }
+
+  /** Permanently delete (anonymize) the caller's account. Requires the password. */
+  @Delete("me")
+  @UseGuards(AuthGuard)
+  async deleteMe(@CurrentUser() user: PublicUser, @Body() body: unknown) {
+    return unwrap(await this.auth.deleteAccount(user.id, body));
   }
 }

@@ -65,14 +65,16 @@ export default function BrowseScreen(): React.ReactElement {
           </Text>
         </View>
         {status === "authenticated" ? (
-          <View style={styles.badge}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {(user?.name?.trim()?.[0] ?? "Y").toUpperCase()}
-              </Text>
-            </View>
-            <Text style={styles.badgeText}>{user?.name?.split(" ")[0] ?? "You"}</Text>
-          </View>
+          <Link href="/profile" asChild>
+            <Pressable style={({ pressed }) => [styles.badge, pressed && styles.pressed]}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {(user?.name?.trim()?.[0] ?? "Y").toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.badgeText}>{user?.name?.split(" ")[0] ?? "You"}</Text>
+            </Pressable>
+          </Link>
         ) : (
           <Link href="/login" asChild>
             <Pressable style={({ pressed }) => [styles.signIn, pressed && styles.pressed]}>
