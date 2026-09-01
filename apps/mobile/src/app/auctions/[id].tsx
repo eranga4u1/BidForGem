@@ -1,21 +1,17 @@
-import type { BidHistoryItem, PublicAuction, PublicGem } from "@gem/types";
-import { Image } from "expo-image";
+import type { BidHistoryItem, PublicAuction, PublicGem } from "@gem/contracts";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { EmptyState } from "@/components/EmptyState";
+import { GemThumb } from "@/components/GemThumb";
+import { PulseDot } from "@/components/PulseDot";
+import { Skeleton } from "@/components/Skeleton";
+import { StatusPill } from "@/components/StatusPill";
 import { api, tokens } from "@/lib/api";
 import { GemApiError, useAuth } from "@/lib/auth";
-import { formatCountdown, formatMoney } from "@/lib/format";
+import { formatCountdown, formatMoney, formatRelative } from "@/lib/format";
 import { useAuctionSocket } from "@/lib/socket";
-import { theme } from "@/lib/theme";
+import { radius, space, theme } from "@/lib/theme";
 
 let localBidSeq = 0;
 
@@ -87,17 +83,21 @@ export default function AuctionScreen(): React.ReactElement {
       ),
   });
 
-  if (pageState === "loading") {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={theme.brand} />
-      </View>
-    );
-  }
+  if (pageState === "loading") return <AuctionSkeleton />;
+
   if (pageState === "error" || !auction || !gem) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>This auction couldn’t be loaded.</Text>
+      <View style={styles.screen}>
+        <EmptyState
+          tone="error"
+          title="This auction couldn’t be loaded"
+          subtitle="It may have been removed, or the connection dropped."
+          actionLabel="Try again"
+          onAction={() => {
+            setPageState("loading");
+            void sync();
+          }}
+        />
       </View>
     );
   }
@@ -134,13 +134,13 @@ export default function AuctionScreen(): React.ReactElement {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.hero}>
-        {photo?.url ? (
-          <Image source={{ uri: photo.url }} style={styles.heroImg} contentFit="cover" />
-        ) : (
-          <Text style={styles.heroGlyph}>◈</Text>
-        )}
+        <GemThumb uri={photo?.url} fill radius={radius.xl} diamond={104} />
       </View>
 
       <View style={styles.titleRow}>
@@ -150,14 +150,12 @@ export default function AuctionScreen(): React.ReactElement {
             {gem.type} · {gem.carat} ct{gem.origin ? ` · ${gem.origin}` : ""}
           </Text>
         </View>
-        <View style={[styles.pill, ended ? styles.pillDim : styles.pillLive]}>
-          <Text style={styles.pillText}>{ended ? auction.status : "live"}</Text>
-        </View>
+        <StatusPill status={auction.status} />
       </View>
 
       <View style={styles.card}>
         <View style={styles.statsRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.k}>Current bid</Text>
             <Text style={styles.bigMoney}>
               {auction.highestBid === null
@@ -169,38 +167,44 @@ export default function AuctionScreen(): React.ReactElement {
               {auction.highestBid === null ? " · start price" : ""}
             </Text>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
+          <View style={styles.endsCol}>
             <Text style={styles.k}>{ended ? "Auction" : "Ends in"}</Text>
             <Countdown endAt={auction.endAt} ended={ended} />
-            <View style={styles.connRow}>
-              <View style={[styles.dot, connected ? styles.dotOn : styles.dotOff]} />
-              <Text style={styles.faint}>{connected ? "Live" : "Reconnecting…"}</Text>
-            </View>
+            {!ended ? (
+              <View style={styles.connRow}>
+                <PulseDot color={connected ? theme.live : theme.faint} on={connected} />
+                <Text style={styles.faint}>{connected ? "Live" : "Reconnecting…"}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.divider} />
 
         {ended ? (
-          <Text style={styles.notice}>
-            {auction.status === "sold"
-              ? `Sold for ${formatMoney(auction.highestBid ?? 0, auction.currency)}.`
-              : auction.status === "canceled"
-                ? "This auction was canceled."
-                : "Ended with no sale."}
-          </Text>
+          <View style={styles.notice}>
+            <Text style={styles.noticeText}>
+              {auction.status === "sold"
+                ? `Sold for ${formatMoney(auction.highestBid ?? 0, auction.currency)}.`
+                : auction.status === "canceled"
+                  ? "This auction was canceled."
+                  : "Ended with no sale."}
+            </Text>
+          </View>
         ) : !user ? (
           <Link href="/login" asChild>
-            <Pressable style={styles.btn}>
+            <Pressable style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
               <Text style={styles.btnText}>Sign in to bid</Text>
             </Pressable>
           </Link>
         ) : isSeller ? (
-          <Text style={styles.notice}>You can’t bid on your own gem.</Text>
+          <View style={styles.notice}>
+            <Text style={styles.noticeText}>This is your listing — you can’t bid on it.</Text>
+          </View>
         ) : (
           <View>
             <Text style={styles.k}>
-              Your bid ({auction.currency}) — min {minLabel}
+              Your bid ({auction.currency}) · min {minLabel}
             </Text>
             <TextInput
               style={styles.input}
@@ -212,7 +216,11 @@ export default function AuctionScreen(): React.ReactElement {
             />
             {bidError && <Text style={styles.error}>{bidError}</Text>}
             <Pressable
-              style={[styles.btn, placing && styles.btnDisabled]}
+              style={({ pressed }) => [
+                styles.btn,
+                placing && styles.btnDisabled,
+                pressed && !placing && styles.btnPressed,
+              ]}
               onPress={() => void placeBid()}
               disabled={placing}
             >
@@ -224,16 +232,51 @@ export default function AuctionScreen(): React.ReactElement {
 
       <Text style={styles.sectionTitle}>Bid history</Text>
       {history.length === 0 ? (
-        <Text style={styles.faint}>No bids yet — be the first.</Text>
+        <View style={styles.emptyHist}>
+          <Text style={styles.faint}>No bids yet — be the first to bid.</Text>
+        </View>
       ) : (
-        history.map((b) => (
-          <View key={b.id} style={styles.histRow}>
-            <Text style={styles.histName}>{b.bidderDisplayName}</Text>
-            <Text style={styles.histAmount}>{formatMoney(b.amount, auction.currency)}</Text>
-          </View>
-        ))
+        <View style={styles.histCard}>
+          {history.map((b, i) => (
+            <View key={b.id} style={[styles.histRow, i === 0 && styles.histRowLead]}>
+              <View style={styles.histLeft}>
+                <View style={[styles.histAvatar, i === 0 && styles.histAvatarLead]}>
+                  <Text style={[styles.histAvatarText, i === 0 && styles.histAvatarTextLead]}>
+                    {(b.bidderDisplayName.trim()[0] ?? "?").toUpperCase()}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.histName}>{b.bidderDisplayName}</Text>
+                  <Text style={styles.histTime}>{formatRelative(b.createdAt)}</Text>
+                </View>
+              </View>
+              <View style={styles.histRight}>
+                <Text style={[styles.histAmount, i === 0 && styles.histAmountLead]}>
+                  {formatMoney(b.amount, auction.currency)}
+                </Text>
+                {i === 0 ? <Text style={styles.leadTag}>Leading</Text> : null}
+              </View>
+            </View>
+          ))}
+        </View>
       )}
     </ScrollView>
+  );
+}
+
+function AuctionSkeleton(): React.ReactElement {
+  return (
+    <View style={[styles.screen, styles.content]}>
+      <Skeleton height={240} radius={radius.xl} />
+      <Skeleton width="60%" height={22} style={{ marginTop: space.md }} />
+      <Skeleton width="40%" height={14} style={{ marginTop: space.sm }} />
+      <View style={[styles.card, { marginTop: space.md }]}>
+        <Skeleton width="50%" height={34} />
+        <Skeleton width="30%" height={14} style={{ marginTop: space.sm }} />
+        <Skeleton height={48} radius={radius.md} style={{ marginTop: space.lg }} />
+        <Skeleton height={50} radius={radius.md} style={{ marginTop: space.md }} />
+      </View>
+    </View>
   );
 }
 
@@ -245,7 +288,12 @@ function Countdown({ endAt, ended }: { endAt: Date; ended: boolean }): React.Rea
     return () => clearInterval(t);
   }, [ended]);
   const remaining = endAt.getTime() - now;
-  return <Text style={styles.countdown}>{ended ? "ended" : formatCountdown(remaining)}</Text>;
+  const urgent = !ended && remaining > 0 && remaining <= 300_000; // < 5 min
+  return (
+    <Text style={[styles.countdown, urgent && styles.countdownUrgent]}>
+      {ended ? "ended" : formatCountdown(remaining)}
+    </Text>
+  );
 }
 
 function bidErrorMessage(err: unknown, min: string): string {
@@ -273,78 +321,117 @@ function bidErrorMessage(err: unknown, min: string): string {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.bg },
-  content: { padding: 16, gap: 12, paddingBottom: 48 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.bg },
+  content: { padding: space.lg, gap: space.md, paddingBottom: 48 },
   hero: {
     height: 240,
-    borderRadius: 18,
-    backgroundColor: "#0f1621",
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: radius.xl,
+    backgroundColor: theme.bgElev,
     overflow: "hidden",
   },
-  heroImg: { width: "100%", height: "100%" },
-  heroGlyph: { color: theme.gold, fontSize: 64 },
-  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  title: { color: theme.text, fontSize: 22, fontWeight: "800" },
-  muted: { color: theme.muted, fontSize: 13, marginTop: 2 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: space.md },
+  title: { color: theme.text, fontSize: 23, fontWeight: "900" },
+  muted: { color: theme.muted, fontSize: 13, marginTop: 3 },
   card: {
     backgroundColor: theme.card,
     borderWidth: 1,
     borderColor: theme.cardBorder,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius.lg,
+    padding: space.lg,
   },
   statsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  endsCol: { alignItems: "flex-end" },
   k: { color: theme.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 },
-  bigMoney: { color: theme.gold, fontSize: 30, fontWeight: "900", marginVertical: 2 },
-  countdown: { color: theme.text, fontSize: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  bigMoney: { color: theme.gold, fontSize: 32, fontWeight: "900", marginVertical: 2 },
+  countdown: {
+    color: theme.text,
+    fontSize: 22,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
+    marginVertical: 2,
+  },
+  countdownUrgent: { color: theme.warn },
   faint: { color: theme.faint, fontSize: 12 },
-  connRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  dotOn: { backgroundColor: theme.live },
-  dotOff: { backgroundColor: theme.faint },
-  divider: { height: 1, backgroundColor: theme.cardBorder, marginVertical: 14 },
+  connRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  divider: { height: 1, backgroundColor: theme.hairline, marginVertical: space.md + 2 },
   input: {
-    backgroundColor: "#0f1621",
+    backgroundColor: theme.bgElev,
     borderWidth: 1,
     borderColor: theme.cardBorder,
-    borderRadius: 12,
+    borderRadius: radius.md,
     color: theme.text,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
     fontSize: 18,
-    marginTop: 6,
+    fontWeight: "700",
+    marginTop: space.sm,
   },
   btn: {
     backgroundColor: theme.brand,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: radius.md,
+    paddingVertical: space.md + 2,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: space.md,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: "#06121f", fontWeight: "800", fontSize: 16 },
+  btnPressed: { opacity: 0.85 },
+  btnText: { color: theme.ink, fontWeight: "900", fontSize: 16 },
   notice: {
-    color: theme.text,
     backgroundColor: "rgba(124,196,255,0.08)",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
+    borderRadius: radius.md,
+    padding: space.md,
   },
-  error: { color: theme.danger, marginTop: 8, fontSize: 14 },
-  pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  pillLive: { backgroundColor: "rgba(79,209,161,0.15)" },
-  pillDim: { backgroundColor: "rgba(155,167,186,0.12)" },
-  pillText: { color: theme.text, fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
-  sectionTitle: { color: theme.text, fontSize: 16, fontWeight: "700", marginTop: 8 },
+  noticeText: { color: theme.text, fontSize: 14 },
+  error: { color: theme.danger, marginTop: space.sm, fontSize: 14 },
+  sectionTitle: { color: theme.text, fontSize: 16, fontWeight: "800", marginTop: space.sm },
+  emptyHist: {
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    alignItems: "center",
+  },
+  histCard: {
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.lg,
+  },
   histRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    alignItems: "center",
+    paddingVertical: space.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.cardBorder,
+    borderBottomColor: theme.hairline,
   },
-  histName: { color: theme.muted, fontSize: 14 },
-  histAmount: { color: theme.text, fontSize: 14, fontWeight: "700" },
+  histRowLead: { borderBottomColor: "transparent" },
+  histLeft: { flexDirection: "row", alignItems: "center", gap: space.md, flex: 1 },
+  histAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.bgElev,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  histAvatarLead: { backgroundColor: "rgba(232,195,122,0.16)", borderColor: theme.gold },
+  histAvatarText: { color: theme.muted, fontWeight: "800", fontSize: 14 },
+  histAvatarTextLead: { color: theme.gold },
+  histName: { color: theme.text, fontSize: 14, fontWeight: "700" },
+  histTime: { color: theme.faint, fontSize: 12, marginTop: 1 },
+  histRight: { alignItems: "flex-end" },
+  histAmount: { color: theme.text, fontSize: 15, fontWeight: "800" },
+  histAmountLead: { color: theme.gold },
+  leadTag: {
+    color: theme.gold,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 1,
+  },
 });
