@@ -1,5 +1,5 @@
 import { and, eq, ne, sql } from "drizzle-orm";
-import type { NotificationType } from "@gem/types";
+import type { NotificationType } from "@gem/contracts";
 import { auctions, bids, gems, notifications } from "../db/schema.js";
 import type { Db } from "../gems/access.js";
 

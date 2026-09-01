@@ -1,5 +1,5 @@
 import { Body, Controller, Inject, Patch, UseGuards } from "@nestjs/common";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { SettingsService } from "../../settings/settings-service.js";
 import { AdminGuard } from "../common/admin.guard.js";
 import { CurrentUser } from "../common/current-user.decorator.js";

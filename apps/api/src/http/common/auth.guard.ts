@@ -1,6 +1,6 @@
 import { type CanActivate, type ExecutionContext, Inject, Injectable } from "@nestjs/common";
 import type { Request } from "express";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { AuthConfig } from "../../auth/config.js";
 import { authenticate } from "../../auth/guard.js";
 import type { Db } from "../../gems/access.js";

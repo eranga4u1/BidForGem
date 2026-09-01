@@ -1,5 +1,5 @@
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
-import type { PostingFee, PostingFeeSettings } from "@gem/types";
+import type { PostingFee, PostingFeeSettings } from "@gem/contracts";
 import { appSettings, gems } from "../db/schema.js";
 import type { Db } from "../gems/access.js";
 

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { io, type Socket } from "socket.io-client";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { AuctionExtendedEvent, BidPlacedEvent } from "@gem/types";
+import type { AuctionExtendedEvent, BidPlacedEvent } from "@gem/contracts";
 import { auctions, bids } from "../db/schema.js";
 import { insertAuction, insertGem, type AuctionOverrides } from "../test/harness.js";
 import { makeTestApi, type TestApi } from "../test/nest-app.js";

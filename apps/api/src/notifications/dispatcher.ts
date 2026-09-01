@@ -1,4 +1,4 @@
-import type { AuctionClosedEvent, UserNotificationEvent } from "@gem/types";
+import type { AuctionClosedEvent, UserNotificationEvent } from "@gem/contracts";
 
 /**
  * Post-commit delivery of real-time notifications. In-app (socket) is the only

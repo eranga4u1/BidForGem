@@ -1,4 +1,4 @@
-import { caratFromMilli, type PublicGem, type PublicMedia } from "@gem/types";
+import { caratFromMilli, type PublicGem, type PublicMedia } from "@gem/contracts";
 import type { Gem, Media } from "../db/schema.js";
 
 export function toPublicMedia(row: Media): PublicMedia {

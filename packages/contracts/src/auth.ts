@@ -124,3 +124,20 @@ export const authSessionSchema = z.object({
   tokens: authTokensSchema,
 });
 export type AuthSession = z.infer<typeof authSessionSchema>;
+
+// --- Response envelopes ---
+
+/** POST /auth/register, /auth/login, /auth/refresh */
+export const authSessionResponseSchema = z.object({
+  ok: z.literal(true),
+  user: publicUserSchema,
+  tokens: authTokensSchema,
+});
+export type AuthSessionResponse = z.infer<typeof authSessionResponseSchema>;
+
+/** GET /auth/me, PATCH /auth/me */
+export const userResponseSchema = z.object({
+  ok: z.literal(true),
+  user: publicUserSchema,
+});
+export type UserResponse = z.infer<typeof userResponseSchema>;

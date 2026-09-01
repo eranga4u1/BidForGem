@@ -41,3 +41,10 @@ export const postingFeeSchema = z.object({
   currency: z.string(),
 });
 export type PostingFee = z.infer<typeof postingFeeSchema>;
+
+/** PATCH /admin/settings/posting_fee */
+export const postingFeeSettingsResponseSchema = z.object({
+  ok: z.literal(true),
+  settings: postingFeeValueSchema,
+});
+export type PostingFeeSettingsResponse = z.infer<typeof postingFeeSettingsResponseSchema>;

@@ -1,4 +1,4 @@
-import type { PublicAuction } from "@gem/types";
+import type { PublicAuction } from "@gem/contracts";
 import { describe, expect, it } from "vitest";
 import { currentAuctionView } from "./auction-status";
 

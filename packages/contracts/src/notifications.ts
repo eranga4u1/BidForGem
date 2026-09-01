@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listResponseSchema } from "./envelopes.js";
 
 export const notificationTypeSchema = z.enum([
   "AUCTION_WON",
@@ -24,9 +25,6 @@ export const notificationsQuerySchema = z.object({
 });
 export type NotificationsQuery = z.infer<typeof notificationsQuerySchema>;
 
-/** User-scoped real-time event pushed to the owner's socket (event: "notification"). */
-export interface UserNotificationEvent {
-  type: NotificationType;
-  payload: Record<string, unknown>;
-  createdAt: string;
-}
+/** GET /notifications */
+export const notificationListResponseSchema = listResponseSchema(publicNotificationSchema);
+export type NotificationListResponse = z.infer<typeof notificationListResponseSchema>;

@@ -1,4 +1,4 @@
-import type { BidHistoryItem, PublicAuction } from "@gem/types";
+import type { BidHistoryItem, PublicAuction } from "@gem/contracts";
 import type { Auction } from "../db/schema.js";
 
 export function toPublicAuction(row: Auction, bidCount: number): PublicAuction {

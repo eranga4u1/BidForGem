@@ -10,7 +10,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { GemsService } from "../../gems/gems-service.js";
 import { AuthGuard, OptionalAuthGuard } from "../common/auth.guard.js";
 import { CurrentUser } from "../common/current-user.decorator.js";

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AUCTION_MAX_DURATION_SECONDS } from "@gem/types";
+import { AUCTION_MAX_DURATION_SECONDS } from "@gem/contracts";
 import { placeBid } from "../bidding/place-bid.js";
 import { bids, users } from "../db/schema.js";
 import { insertAuction, insertGem, insertUser, makeTestDb, type AnyDb } from "../test/harness.js";

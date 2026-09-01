@@ -1,6 +1,6 @@
 "use client";
 
-import type { BidHistoryItem, PublicAuction, PublicGem, PublicUser } from "@gem/types";
+import type { BidHistoryItem, PublicAuction, PublicGem, PublicUser } from "@gem/contracts";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, tokens } from "@/lib/api";

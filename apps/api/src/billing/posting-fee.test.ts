@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { PostingFeeSettings } from "@gem/types";
+import type { PostingFeeSettings } from "@gem/contracts";
 import { appSettings } from "../db/schema.js";
 import { createGemsService } from "../gems/gems-service.js";
 import { createSettingsService, type SettingsService } from "../settings/settings-service.js";

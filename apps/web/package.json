@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@gem/api-client": "workspace:*",
-    "@gem/types": "workspace:*",
+    "@gem/contracts": "workspace:*",
     "next": "^16.2.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

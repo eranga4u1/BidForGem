@@ -1,5 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { notificationsQuerySchema, type PublicNotification } from "@gem/types";
+import { notificationsQuerySchema, type PublicNotification } from "@gem/contracts";
 import type { ZodError } from "zod";
 import { notifications } from "../db/schema.js";
 import type { Db } from "../gems/access.js";

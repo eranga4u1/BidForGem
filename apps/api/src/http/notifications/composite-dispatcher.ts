@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { AuctionClosedEvent, UserNotificationEvent } from "@gem/types";
+import type { AuctionClosedEvent, UserNotificationEvent } from "@gem/contracts";
 import type { NotificationDispatcher } from "../../notifications/dispatcher.js";
 import { EmailNotifier } from "./email-notifier.js";
 import { SocketNotificationDispatcher } from "./socket-dispatcher.js";

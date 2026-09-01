@@ -1,4 +1,4 @@
-import type { PublicGem } from "@gem/types";
+import type { PublicGem } from "@gem/contracts";
 import Link from "next/link";
 
 export function GemCard({ gem }: { gem: PublicGem }): React.ReactElement {

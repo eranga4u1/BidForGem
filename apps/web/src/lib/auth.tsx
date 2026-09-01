@@ -1,8 +1,8 @@
 "use client";
 
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, GemApiError, refreshSession, tokens } from "./api";
+import { api, GemApiError, UnauthenticatedError } from "./api";
 
 type Status = "loading" | "authenticated" | "anonymous";
 
@@ -25,15 +25,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   useEffect(() => {
     let active = true;
     void (async () => {
-      if (!tokens.refresh) {
-        if (active) setStatus("anonymous");
-        return;
-      }
-      const token = await refreshSession();
-      if (!token) {
-        if (active) setStatus("anonymous");
-        return;
-      }
+      // The client refreshes off the stored refresh token if the access token is
+      // gone (page reload); a missing/expired session surfaces as
+      // UnauthenticatedError, which just means "anonymous".
       try {
         const me = await api.auth.me();
         if (active) {
@@ -41,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
           setStatus("authenticated");
         }
       } catch {
-        tokens.clear();
         if (active) setStatus("anonymous");
       }
     })();
@@ -51,16 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const { user: u, tokens: t } = await api.auth.login({ email, password });
-    tokens.set(t);
+    const { user: u } = await api.auth.login({ email, password });
     setUser(u);
     setStatus("authenticated");
   }, []);
 
   const register = useCallback(
     async (name: string, email: string, password: string): Promise<void> => {
-      const { user: u, tokens: t } = await api.auth.register({ name, email, password });
-      tokens.set(t);
+      const { user: u } = await api.auth.register({ name, email, password });
       setUser(u);
       setStatus("authenticated");
     },
@@ -68,9 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   );
 
   const logout = useCallback(async (): Promise<void> => {
-    const rt = tokens.refresh;
-    if (rt) await api.auth.logout(rt).catch(() => undefined);
-    tokens.clear();
+    await api.auth.logout();
     setUser(null);
     setStatus("anonymous");
   }, []);
@@ -84,8 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     try {
       setUser(await api.auth.me());
     } catch (err) {
-      if (err instanceof GemApiError && err.status === 401) {
-        tokens.clear();
+      if (
+        err instanceof UnauthenticatedError ||
+        (err instanceof GemApiError && err.status === 401)
+      ) {
         setUser(null);
         setStatus("anonymous");
       }

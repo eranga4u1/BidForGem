@@ -1,4 +1,4 @@
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { User } from "../db/schema.js";
 
 /**

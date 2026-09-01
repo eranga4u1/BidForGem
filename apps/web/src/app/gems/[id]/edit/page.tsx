@@ -1,6 +1,6 @@
 "use client";
 
-import type { MediaType, PostingFee, PublicGem } from "@gem/types";
+import type { MediaType, PostingFee, PublicGem } from "@gem/contracts";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";

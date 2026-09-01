@@ -10,7 +10,7 @@ import {
   type AuthTokens,
   type PublicUser,
   type UserRole,
-} from "@gem/types";
+} from "@gem/contracts";
 import type { ZodError } from "zod";
 import type { Schema } from "../db/client.js";
 import { passwordResetTokens, refreshTokens, users } from "../db/schema.js";

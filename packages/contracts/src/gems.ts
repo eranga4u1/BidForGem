@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listResponseSchema } from "./envelopes.js";
 
 /** Gem lifecycle status (mirrors the DB enum). */
 export const gemStatusSchema = z.enum(["draft", "active", "sold", "closed"]);
@@ -108,11 +109,41 @@ export const publicGemSchema = z.object({
 });
 export type PublicGem = z.infer<typeof publicGemSchema>;
 
-/** Response when an upload URL is issued. */
-export interface UploadTicket {
-  mediaId: string;
-  url: string;
-  method: "PUT";
-  headers: Record<string, string>;
-  expiresAt: Date;
-}
+/** The pre-signed upload instruction returned when an upload URL is issued. */
+export const uploadTicketSchema = z.object({
+  mediaId: z.string(),
+  url: z.string(),
+  method: z.literal("PUT"),
+  headers: z.record(z.string(), z.string()),
+  expiresAt: z.coerce.date(),
+});
+export type UploadTicket = z.infer<typeof uploadTicketSchema>;
+
+// --- Response envelopes ---
+
+/** GET/POST/PATCH /gems/:id */
+export const gemResponseSchema = z.object({ ok: z.literal(true), gem: publicGemSchema });
+export type GemResponse = z.infer<typeof gemResponseSchema>;
+
+/** GET /gems */
+export const gemListResponseSchema = listResponseSchema(publicGemSchema);
+export type GemListResponse = z.infer<typeof gemListResponseSchema>;
+
+/** POST /gems/:id/media/upload-url */
+export const uploadTicketResponseSchema = z.object({
+  ok: z.literal(true),
+  ticket: uploadTicketSchema,
+});
+export type UploadTicketResponse = z.infer<typeof uploadTicketResponseSchema>;
+
+/** POST /gems/:id/media/:mediaId/complete */
+export const mediaResponseSchema = z.object({ ok: z.literal(true), media: publicMediaSchema });
+export type MediaResponse = z.infer<typeof mediaResponseSchema>;
+
+/** GET /gems/:id/media/:mediaId/url */
+export const mediaReadUrlResponseSchema = z.object({
+  ok: z.literal(true),
+  url: z.string(),
+  expiresAt: z.coerce.date().nullable(),
+});
+export type MediaReadUrlResponse = z.infer<typeof mediaReadUrlResponseSchema>;

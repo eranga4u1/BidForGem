@@ -7,7 +7,7 @@ import {
   updateGemInputSchema,
   type PostingFee,
   type PublicGem,
-} from "@gem/types";
+} from "@gem/contracts";
 import type { ZodError } from "zod";
 import { resolvePostingFee } from "../billing/posting-fee.js";
 import { gems, media, type Gem } from "../db/schema.js";

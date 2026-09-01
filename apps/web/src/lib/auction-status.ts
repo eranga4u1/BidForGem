@@ -1,4 +1,4 @@
-import type { PublicAuction } from "@gem/types";
+import type { PublicAuction } from "@gem/contracts";
 
 /**
  * What the gem page should show about a gem's auction. Derived purely from the

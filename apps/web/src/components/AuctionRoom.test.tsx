@@ -1,4 +1,4 @@
-import type { PublicAuction, PublicGem, PublicUser } from "@gem/types";
+import type { PublicAuction, PublicGem, PublicUser } from "@gem/contracts";
 import { GemApiError } from "@gem/api-client";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

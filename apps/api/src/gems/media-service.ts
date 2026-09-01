@@ -7,7 +7,7 @@ import {
   type MediaType,
   type PublicMedia,
   type UploadTicket,
-} from "@gem/types";
+} from "@gem/contracts";
 import type { ZodError } from "zod";
 import { media } from "../db/schema.js";
 import type { StorageProvider, StorageVisibility } from "../storage/provider.js";

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import type { Request } from "express";
-import { placeBidInputSchema, type PublicUser } from "@gem/types";
+import { placeBidInputSchema, type PublicUser } from "@gem/contracts";
 import type { AuctionsService } from "../../auctions/auctions-service.js";
 import { toPublicAuction } from "../../auctions/mappers.js";
 import type { RateLimiter } from "../../auth/rate-limit.js";
