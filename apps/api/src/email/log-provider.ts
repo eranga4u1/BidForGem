@@ -1,10 +1,11 @@
 import { Logger } from "@nestjs/common";
-import type { EmailMessage, EmailProvider } from "./provider.js";
+import type { RenderedEmail } from "../mail/templates/index.js";
+import type { EmailProvider, SentEmail } from "./provider.js";
 
 export interface LogEmailProvider extends EmailProvider {
   readonly kind: "log";
   /** Every message that WOULD have been sent, in order. Tests assert on this. */
-  readonly sent: ReadonlyArray<EmailMessage>;
+  readonly sent: ReadonlyArray<SentEmail>;
   clear(): void;
 }
 
@@ -16,13 +17,13 @@ export interface LogEmailProvider extends EmailProvider {
  */
 export function createLogEmailProvider(): LogEmailProvider {
   const logger = new Logger("EmailLog");
-  const sent: EmailMessage[] = [];
+  const sent: SentEmail[] = [];
   return {
     kind: "log",
     sent,
-    sendEmail(message: EmailMessage): Promise<void> {
-      sent.push(message);
-      logger.log(`[dev/no-send] to=${message.to} subject=${JSON.stringify(message.subject)}`);
+    sendEmail(to: string, email: RenderedEmail): Promise<void> {
+      sent.push({ to, ...email });
+      logger.log(`[dev/no-send] to=${to} subject=${JSON.stringify(email.subject)}`);
       return Promise.resolve();
     },
     clear() {

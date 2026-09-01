@@ -10,12 +10,15 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { AuthService, RequestContext } from "../../auth/auth-service.js";
+import type { EmailConfig } from "../../email/config.js";
+import type { EmailProvider } from "../../email/provider.js";
+import { welcomeEmail } from "../../mail/templates/index.js";
 import { AuthGuard } from "../common/auth.guard.js";
 import { CurrentUser } from "../common/current-user.decorator.js";
 import { unwrap } from "../common/respond.js";
-import { AUTH_SERVICE } from "../tokens.js";
+import { AUTH_SERVICE, EMAIL_CONFIG, EMAIL_PROVIDER } from "../tokens.js";
 
 function ctxFrom(req: Request): RequestContext {
   return { ip: req.ip ?? null, userAgent: req.headers["user-agent"] ?? null };
@@ -23,11 +26,28 @@ function ctxFrom(req: Request): RequestContext {
 
 @Controller("auth")
 export class AuthController {
-  constructor(@Inject(AUTH_SERVICE) private readonly auth: AuthService) {}
+  constructor(
+    @Inject(AUTH_SERVICE) private readonly auth: AuthService,
+    @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+    @Inject(EMAIL_CONFIG) private readonly emailConfig: EmailConfig,
+  ) {}
 
   @Post("register")
   async register(@Body() body: unknown, @Req() req: Request) {
-    return unwrap(await this.auth.register(body, ctxFrom(req)));
+    const result = await this.auth.register(body, ctxFrom(req));
+    if (result.ok) {
+      // Best-effort welcome email; must never block or fail registration.
+      void this.email
+        .sendEmail(
+          result.user.email,
+          welcomeEmail({
+            recipientName: result.user.name,
+            browseUrl: `${this.emailConfig.appBaseUrl}/gems`,
+          }),
+        )
+        .catch(() => undefined);
+    }
+    return unwrap(result);
   }
 
   @Post("login")

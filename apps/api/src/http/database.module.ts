@@ -6,12 +6,8 @@ import type { AuthConfig } from "../auth/config.js";
 import { loadAuthConfig } from "../auth/config.js";
 import { createInMemoryRateLimiter, type RateLimiter } from "../auth/rate-limit.js";
 import { createPoolDatabase } from "../db/client.js";
-import {
-  createEmailProvider,
-  loadEmailConfig,
-  passwordResetEmail,
-  type EmailConfig,
-} from "../email/index.js";
+import { createEmailProvider, loadEmailConfig, type EmailConfig } from "../email/index.js";
+import { passwordResetEmail } from "../mail/templates/index.js";
 import type { EmailProvider } from "../email/provider.js";
 import type { Db } from "../gems/access.js";
 import { createGemsService } from "../gems/gems-service.js";
@@ -123,10 +119,20 @@ import {
           passwordResetMailer: {
             sendResetEmail: ({ to, name, token }) => {
               const resetUrl = `${emailConfig.appBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+              const minutes = Math.round(config.passwordResetTtlSeconds / 60);
+              const expiresInLabel =
+                minutes < 60
+                  ? `${minutes} minutes`
+                  : minutes % 60 === 0
+                    ? `${minutes / 60} hour${minutes / 60 === 1 ? "" : "s"}`
+                    : `${minutes} minutes`;
               // Fire-and-forget: the request path must not wait on the network,
               // so response timing can't leak whether the account exists.
               void emailProvider
-                .sendEmail({ to, ...passwordResetEmail({ name, resetUrl }) })
+                .sendEmail(
+                  to,
+                  passwordResetEmail({ recipientName: name, resetUrl, expiresInLabel }),
+                )
                 .catch(() => undefined);
               return Promise.resolve();
             },
