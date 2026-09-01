@@ -1,5 +1,6 @@
 import { Logger } from "@nestjs/common";
-import type { EmailMessage, EmailProvider } from "./provider.js";
+import type { RenderedEmail } from "../mail/templates/index.js";
+import type { EmailProvider } from "./provider.js";
 
 export interface ResendOptions {
   apiKey: string;
@@ -18,7 +19,7 @@ export function createResendEmailProvider(opts: ResendOptions): EmailProvider {
   const logger = new Logger("EmailResend");
   return {
     kind: "resend",
-    async sendEmail(message: EmailMessage): Promise<void> {
+    async sendEmail(to: string, email: RenderedEmail): Promise<void> {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -27,17 +28,17 @@ export function createResendEmailProvider(opts: ResendOptions): EmailProvider {
         },
         body: JSON.stringify({
           from: opts.from,
-          to: message.to,
-          subject: message.subject,
-          text: message.text,
-          ...(message.html ? { html: message.html } : {}),
+          to,
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
         }),
       });
       if (!res.ok) {
         // Body may contain provider error detail but never our secret; log the
         // status only (subject is safe — it carries no token/PII by construction).
         logger.error(
-          `Resend send failed (${res.status}) for subject ${JSON.stringify(message.subject)}`,
+          `Resend send failed (${res.status}) for subject ${JSON.stringify(email.subject)}`,
         );
         throw new Error(`Email send failed with status ${res.status}`);
       }

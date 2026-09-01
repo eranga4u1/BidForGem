@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { NotificationsService } from "../../notifications/notifications-service.js";
 import { AuthGuard } from "../common/auth.guard.js";
 import { CurrentUser } from "../common/current-user.decorator.js";

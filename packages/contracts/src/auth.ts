@@ -91,6 +91,12 @@ export const resetPasswordInputSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
 
+/** Deleting your own account requires re-entering your password. */
+export const deleteAccountInputSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+export type DeleteAccountInput = z.infer<typeof deleteAccountInputSchema>;
+
 /** Roles a user can hold. Mirrors the DB enum. */
 export const userRoleSchema = z.enum(["user", "admin"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
@@ -124,3 +130,20 @@ export const authSessionSchema = z.object({
   tokens: authTokensSchema,
 });
 export type AuthSession = z.infer<typeof authSessionSchema>;
+
+// --- Response envelopes ---
+
+/** POST /auth/register, /auth/login, /auth/refresh */
+export const authSessionResponseSchema = z.object({
+  ok: z.literal(true),
+  user: publicUserSchema,
+  tokens: authTokensSchema,
+});
+export type AuthSessionResponse = z.infer<typeof authSessionResponseSchema>;
+
+/** GET /auth/me, PATCH /auth/me */
+export const userResponseSchema = z.object({
+  ok: z.literal(true),
+  user: publicUserSchema,
+});
+export type UserResponse = z.infer<typeof userResponseSchema>;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicAuction, PublicGem } from "@gem/types";
+import type { PublicAuction, PublicGem } from "@gem/contracts";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuctionRoom } from "@/components/AuctionRoom";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicNotification } from "@gem/types";
+import type { PublicNotification } from "@gem/contracts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";

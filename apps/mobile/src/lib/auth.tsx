@@ -1,6 +1,6 @@
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, GemApiError, refreshSession, tokens } from "./api";
+import { api, GemApiError } from "./api";
 
 type Status = "loading" | "authenticated" | "anonymous";
 
@@ -10,6 +10,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,16 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   useEffect(() => {
     let active = true;
     void (async () => {
-      const rt = await tokens.getRefresh();
-      if (!rt) {
-        if (active) setStatus("anonymous");
-        return;
-      }
-      const token = await refreshSession();
-      if (!token) {
-        if (active) setStatus("anonymous");
-        return;
-      }
+      // The client refreshes off the stored refresh token when needed; a
+      // missing/expired session throws UnauthenticatedError → anonymous.
       try {
         const me = await api.auth.me();
         if (active) {
@@ -38,7 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
           setStatus("authenticated");
         }
       } catch {
-        await tokens.clear();
         if (active) setStatus("anonymous");
       }
     })();
@@ -48,16 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const { user: u, tokens: t } = await api.auth.login({ email, password });
-    await tokens.set(t);
+    const { user: u } = await api.auth.login({ email, password });
     setUser(u);
     setStatus("authenticated");
   }, []);
 
   const register = useCallback(
     async (name: string, email: string, password: string): Promise<void> => {
-      const { user: u, tokens: t } = await api.auth.register({ name, email, password });
-      await tokens.set(t);
+      const { user: u } = await api.auth.register({ name, email, password });
       setUser(u);
       setStatus("authenticated");
     },
@@ -65,16 +55,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   );
 
   const logout = useCallback(async (): Promise<void> => {
-    const rt = await tokens.getRefresh();
-    if (rt) await api.auth.logout(rt).catch(() => undefined);
-    await tokens.clear();
+    await api.auth.logout();
+    setUser(null);
+    setStatus("anonymous");
+  }, []);
+
+  const deleteAccount = useCallback(async (password: string): Promise<void> => {
+    await api.auth.deleteAccount(password);
     setUser(null);
     setStatus("anonymous");
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, register, logout }),
-    [user, status, login, register, logout],
+    () => ({ user, status, login, register, logout, deleteAccount }),
+    [user, status, login, register, logout, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

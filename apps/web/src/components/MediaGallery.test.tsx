@@ -1,4 +1,4 @@
-import type { PublicMedia } from "@gem/types";
+import type { PublicMedia } from "@gem/contracts";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 

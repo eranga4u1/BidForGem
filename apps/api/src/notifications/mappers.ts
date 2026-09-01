@@ -1,4 +1,4 @@
-import type { NotificationType, PublicNotification } from "@gem/types";
+import type { NotificationType, PublicNotification } from "@gem/contracts";
 import type { Notification } from "../db/schema.js";
 
 export function toPublicNotification(row: Notification): PublicNotification {

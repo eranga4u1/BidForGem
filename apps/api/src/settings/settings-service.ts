@@ -3,7 +3,7 @@ import {
   postingFeeUpdateInputSchema,
   postingFeeValueSchema,
   type PostingFeeSettings,
-} from "@gem/types";
+} from "@gem/contracts";
 import type { ZodError } from "zod";
 import { appSettings } from "../db/schema.js";
 import type { Db } from "../gems/access.js";

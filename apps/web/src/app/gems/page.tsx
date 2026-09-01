@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicGem } from "@gem/types";
+import type { PublicGem } from "@gem/contracts";
 import { useCallback, useEffect, useState } from "react";
 import { GemCard } from "@/components/GemCard";
 import { api } from "@/lib/api";

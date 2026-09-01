@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listResponseSchema } from "./envelopes.js";
 
 export const auctionStatusSchema = z.enum(["scheduled", "active", "closed", "canceled", "sold"]);
 export type AuctionStatus = z.infer<typeof auctionStatusSchema>;
@@ -96,29 +97,19 @@ export const bidHistoryItemSchema = z.object({
 });
 export type BidHistoryItem = z.infer<typeof bidHistoryItemSchema>;
 
-// --- Socket.IO event payloads (namespace `/auctions`) ---
+// --- Response envelopes ---
 
-/** Emitted to `auction:<id>` after a bid commits. Contains NO PII. */
-export interface BidPlacedEvent {
-  auctionId: string;
-  amount: number;
-  bidderDisplayName: string;
-  highestBid: number;
-  bidCount: number;
-  endAt: string;
-}
+/** GET /auctions/:id, POST /auctions, POST /auctions/:id/cancel, POST bids */
+export const auctionResponseSchema = z.object({
+  ok: z.literal(true),
+  auction: publicAuctionSchema,
+});
+export type AuctionResponse = z.infer<typeof auctionResponseSchema>;
 
-export interface AuctionExtendedEvent {
-  auctionId: string;
-  endAt: string;
-}
+/** GET /auctions */
+export const auctionListResponseSchema = listResponseSchema(publicAuctionSchema);
+export type AuctionListResponse = z.infer<typeof auctionListResponseSchema>;
 
-export interface AuctionClosedEvent {
-  auctionId: string;
-  winnerId: string | null;
-  finalAmount: number | null;
-}
-
-export interface JoinAuctionMessage {
-  auctionId: string;
-}
+/** GET /auctions/:id/bids */
+export const bidHistoryResponseSchema = listResponseSchema(bidHistoryItemSchema);
+export type BidHistoryResponse = z.infer<typeof bidHistoryResponseSchema>;

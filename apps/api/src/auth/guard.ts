@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { Schema } from "../db/client.js";
 import { users } from "../db/schema.js";
 import type { AuthConfig } from "./config.js";

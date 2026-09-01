@@ -13,7 +13,7 @@ import type {
   AuctionExtendedEvent,
   BidPlacedEvent,
   UserNotificationEvent,
-} from "@gem/types";
+} from "@gem/contracts";
 import type { AuthConfig } from "../../auth/config.js";
 import { extractBearerToken } from "../../auth/guard.js";
 import { verifyAccessToken } from "../../auth/tokens.js";

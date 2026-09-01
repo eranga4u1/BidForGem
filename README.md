@@ -5,8 +5,8 @@ that share typed domain contracts, with live, server-timed auctions over
 Socket.IO. It covers the full seller → auction → bidder lifecycle — gem listings
 with access-gated media, server-authoritative auction timing and close, live
 bidding with anti-snipe extension, in-app + email notifications, and password
-reset via an emailed single-use token. **Mobile and real payments are not built
-yet** (see [Status](#status--not-yet-done)).
+reset via an emailed single-use token. **Real payments are not built yet, and the
+mobile app is still in progress** (see [Status](#status--not-yet-done)).
 
 ## Tech stack
 
@@ -31,16 +31,18 @@ on `SELECT … FOR UPDATE` row locking.
 
 ```
 apps/
-  api    NestJS + Socket.IO API, Drizzle schema + SQL migrations, domain services
-  web    Next.js web app (browse gems, manage listings, live auction room)
+  api     NestJS + Socket.IO API, Drizzle schema + SQL migrations, domain services
+  web     Next.js web app (browse gems, manage listings, live auction room)
+  mobile  Expo / React Native app (auth, browse, auction view) — in progress
 packages/
-  types        Shared domain types + zod schemas   (@gem/types)
-  api-client   Typed fetch client for web/mobile    (@gem/api-client)
-  config       Shared ESLint / Prettier / tsconfig  (@gem/config)
+  contracts    Wire contracts: zod schemas + inferred types  (@gem/contracts)
+  api-client   Typed fetch client for web/mobile              (@gem/api-client)
+  config       Shared ESLint / Prettier / tsconfig            (@gem/config)
 ```
 
-> A mobile (Expo / React Native) app is planned but **not yet in the repo**; the
-> shared `@gem/types` + `@gem/api-client` packages exist so it can drop in later.
+> The web and mobile apps share exactly one source of truth for wire shapes
+> (`@gem/contracts`) and one HTTP client (`@gem/api-client`) — including token
+> storage and single-flight refresh — so the two platforms cannot drift.
 
 ## Prerequisites
 
@@ -95,7 +97,7 @@ across an API restart. Point `STORAGE_DRIVER=s3` at S3/R2 for persistence.
 
 ```bash
 pnpm test                      # all packages (Turborepo)
-pnpm --filter @gem/api test    # the API suite (~152 tests, Vitest + PGlite, no network)
+pnpm --filter @gem/api test    # the API suite (Vitest + PGlite, no network)
 pnpm --filter @gem/web test    # web component/unit tests
 
 pnpm typecheck                 # tsc --noEmit across the graph
@@ -110,7 +112,8 @@ network.
 
 This is a working, well-tested MVP — not production-ready. Honestly:
 
-- **Mobile app** — not started. Shared types + API client are in place for it.
+- **Mobile app** — early Expo app in the repo (auth, browse, auction view) built
+  on the shared `@gem/contracts` + `@gem/api-client`; not yet feature-complete.
 - **Payments & settlement** — the posting-fee gate is config-driven and auctions
   close with a recorded winner, but there is **no real payment integration and
   no winner → seller money movement** yet.
@@ -127,6 +130,6 @@ This is a working, well-tested MVP — not production-ready. Honestly:
 - Clean architecture: framework-free domain logic, thin transport/controllers.
 - All money is integer minor units (cents); invariants enforced at the DB level
   via CHECK constraints, not just app code.
-- Shared contracts live in `@gem/types`, imported by web (and future mobile).
+- Shared contracts live in `@gem/contracts`, imported by web and mobile.
 - Migrations only — no manual schema edits. Conventional Commits (commitlint +
   husky).

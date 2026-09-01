@@ -5,7 +5,7 @@ import {
   createAuctionInputSchema,
   type BidHistoryItem,
   type PublicAuction,
-} from "@gem/types";
+} from "@gem/contracts";
 import type { ZodError } from "zod";
 import { auctions, bids, gems, users } from "../db/schema.js";
 import { isDeleted, loadGem, type Db } from "../gems/access.js";

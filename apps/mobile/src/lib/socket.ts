@@ -3,7 +3,7 @@ import type {
   AuctionExtendedEvent,
   BidPlacedEvent,
   UserNotificationEvent,
-} from "@gem/types";
+} from "@gem/contracts";
 import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 import { SOCKET_URL } from "./config";

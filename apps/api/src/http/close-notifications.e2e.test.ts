@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { io, type Socket } from "socket.io-client";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { AuctionClosedEvent, UserNotificationEvent } from "@gem/types";
+import type { AuctionClosedEvent, UserNotificationEvent } from "@gem/contracts";
 import { bids } from "../db/schema.js";
 import { insertAuction, insertGem } from "../test/harness.js";
 import { makeTestApi, type TestApi } from "../test/nest-app.js";

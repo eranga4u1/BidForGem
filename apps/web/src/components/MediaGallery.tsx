@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicMedia } from "@gem/types";
+import type { PublicMedia } from "@gem/contracts";
 import { useState } from "react";
 import { api } from "@/lib/api";
 

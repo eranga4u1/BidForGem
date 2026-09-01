@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { errors, jwtVerify, SignJWT } from "jose";
-import type { UserRole } from "@gem/types";
+import type { UserRole } from "@gem/contracts";
 import type { AuthConfig } from "./config.js";
 
 export interface AccessTokenClaims {

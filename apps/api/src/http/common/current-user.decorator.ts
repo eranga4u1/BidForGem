@@ -1,5 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
-import type { PublicUser } from "@gem/types";
+import type { PublicUser } from "@gem/contracts";
 import type { AuthedRequest } from "./auth.guard.js";
 
 /** Injects the authenticated user (or null under OptionalAuthGuard). */

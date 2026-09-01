@@ -4,6 +4,7 @@
   "private": true,
   "description": "Typed fetch layer shared by the Gem web and mobile apps.",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -21,7 +22,7 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@gem/types": "workspace:*",
+    "@gem/contracts": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

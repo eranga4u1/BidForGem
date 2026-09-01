@@ -14,18 +14,20 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/http/main.js",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
     "dev:server": "tsx src/dev/server.ts",
     "dev:api": "node --import @swc-node/register/esm-register src/dev/api.ts",
     "seed": "tsx src/db/seed.ts",
+    "email:preview": "tsx src/mail/preview.ts",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1093.0",
     "@aws-sdk/s3-request-presigner": "^3.1093.0",
-    "@gem/types": "workspace:*",
+    "@gem/contracts": "workspace:*",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
     "@nestjs/platform-express": "^11.1.28",

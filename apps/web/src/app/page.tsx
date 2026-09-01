@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicAuction, PublicGem } from "@gem/types";
+import type { PublicAuction, PublicGem } from "@gem/contracts";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Countdown } from "@/components/Countdown";

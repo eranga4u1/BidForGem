@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@gem/api-client": "workspace:*",
-    "@gem/types": "workspace:*",
+    "@gem/contracts": "workspace:*",
     "@expo/ui": "~57.0.10",
     "expo": "~57.0.12",
     "expo-constants": "~57.0.10",

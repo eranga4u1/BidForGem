@@ -9,7 +9,7 @@ module.exports = {
         "api",
         "web",
         "mobile",
-        "types",
+        "contracts",
         "api-client",
         "config",
         "repo",
