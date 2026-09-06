@@ -16,15 +16,15 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://staging-api.bidforgem.example",
-        "EXPO_PUBLIC_SOCKET_URL": "https://staging-api.bidforgem.example"
+        "EXPO_PUBLIC_API_URL": "https://bidforgem.onrender.com",
+        "EXPO_PUBLIC_SOCKET_URL": "https://bidforgem.onrender.com"
       }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.bidforgem.example",
-        "EXPO_PUBLIC_SOCKET_URL": "https://api.bidforgem.example"
+        "EXPO_PUBLIC_API_URL": "https://bidforgem.onrender.com",
+        "EXPO_PUBLIC_SOCKET_URL": "https://bidforgem.onrender.com"
       }
     }
   },
