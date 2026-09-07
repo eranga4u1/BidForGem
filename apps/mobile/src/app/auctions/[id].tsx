@@ -1,5 +1,5 @@
 import type { BidHistoryItem, PublicAuction, PublicGem } from "@gem/contracts";
-import { Link, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
@@ -17,6 +17,7 @@ let localBidSeq = 0;
 
 export default function AuctionScreen(): React.ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { user } = useAuth();
   const [auction, setAuction] = useState<PublicAuction | null>(null);
   const [gem, setGem] = useState<PublicGem | null>(null);
@@ -192,11 +193,12 @@ export default function AuctionScreen(): React.ReactElement {
             </Text>
           </View>
         ) : !user ? (
-          <Link href="/login" asChild>
-            <Pressable style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-              <Text style={styles.btnText}>Sign in to bid</Text>
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push("/login")}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.btnText}>Sign in to bid</Text>
+          </Pressable>
         ) : isSeller ? (
           <View style={styles.notice}>
             <Text style={styles.noticeText}>This is your listing — you can’t bid on it.</Text>

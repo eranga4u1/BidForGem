@@ -1,5 +1,5 @@
 import type { PublicAuction, PublicGem } from "@gem/contracts";
-import { Link, useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
@@ -18,6 +18,7 @@ interface Row {
 
 export default function BrowseScreen(): React.ReactElement {
   const { status, user } = useAuth();
+  const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
@@ -65,22 +66,24 @@ export default function BrowseScreen(): React.ReactElement {
           </Text>
         </View>
         {status === "authenticated" ? (
-          <Link href="/profile" asChild>
-            <Pressable style={({ pressed }) => [styles.badge, pressed && styles.pressed]}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(user?.name?.trim()?.[0] ?? "Y").toUpperCase()}
-                </Text>
-              </View>
-              <Text style={styles.badgeText}>{user?.name?.split(" ")[0] ?? "You"}</Text>
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(user?.name?.trim()?.[0] ?? "Y").toUpperCase()}
+              </Text>
+            </View>
+            <Text style={styles.badgeText}>{user?.name?.split(" ")[0] ?? "You"}</Text>
+          </Pressable>
         ) : (
-          <Link href="/login" asChild>
-            <Pressable style={({ pressed }) => [styles.signIn, pressed && styles.pressed]}>
-              <Text style={styles.signInText}>Sign in</Text>
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push("/login")}
+            style={({ pressed }) => [styles.signIn, pressed && styles.pressed]}
+          >
+            <Text style={styles.signInText}>Sign in</Text>
+          </Pressable>
         )}
       </View>
 
