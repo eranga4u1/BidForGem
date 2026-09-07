@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { GemApiError, useAuth } from "@/lib/auth";
 import { authStyles as s } from "@/lib/auth-styles";
 import { theme } from "@/lib/theme";
@@ -31,7 +32,12 @@ export default function LoginScreen(): React.ReactElement {
   }
 
   return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: theme.bg }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 20 }}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+    >
       <View style={s.card}>
         <Text style={s.title}>Welcome back</Text>
         <Text style={s.label}>Email</Text>
@@ -65,6 +71,6 @@ export default function LoginScreen(): React.ReactElement {
           <Text style={s.link}>No account? Create one</Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }

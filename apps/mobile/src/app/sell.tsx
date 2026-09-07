@@ -2,16 +2,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { api, GemApiError } from "@/lib/api";
 import { uploadGemPhoto, type PickedPhoto } from "@/lib/upload";
 import { radius, space, theme } from "@/lib/theme";
@@ -123,142 +115,139 @@ export default function SellScreen(): React.ReactElement {
   }
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
     >
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Photos */}
-        <Text style={styles.section}>Photos</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginTop: space.sm }}
-        >
-          <View style={styles.photoRow}>
-            {photos.map((p, i) => (
-              <View key={`${p.uri}-${i}`} style={styles.thumb}>
-                <Image source={{ uri: p.uri }} style={styles.thumbImg} contentFit="cover" />
-                <Pressable
-                  style={styles.thumbRemove}
-                  onPress={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-                  hitSlop={8}
-                >
-                  <Text style={styles.thumbRemoveText}>×</Text>
-                </Pressable>
-              </View>
-            ))}
-            {photos.length < 12 ? (
-              <Pressable style={styles.addTile} onPress={() => void pickPhotos()}>
-                <Text style={styles.addPlus}>＋</Text>
-                <Text style={styles.addLabel}>Add</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </ScrollView>
-
-        {/* Details */}
-        <Text style={styles.section}>Gem details</Text>
-        <Field
-          label="Title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Ceylon Blue Sapphire"
-        />
-        <View style={styles.row}>
-          <Field label="Type" value={type} onChangeText={setType} placeholder="sapphire" flex />
-          <Field
-            label="Carat"
-            value={carat}
-            onChangeText={setCarat}
-            placeholder="2.5"
-            keyboardType="decimal-pad"
-            flex
-          />
-        </View>
-        <View style={styles.row}>
-          <Field label="Color" value={color} onChangeText={setColor} placeholder="Blue" flex />
-          <Field label="Clarity" value={clarity} onChangeText={setClarity} placeholder="VS" flex />
-        </View>
-        <View style={styles.row}>
-          <Field label="Cut" value={cut} onChangeText={setCut} placeholder="Oval" flex />
-          <Field
-            label="Origin"
-            value={origin}
-            onChangeText={setOrigin}
-            placeholder="Sri Lanka"
-            flex
-          />
-        </View>
-        <Field
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Notes on the stone…"
-          multiline
-        />
-
-        {/* Auction */}
-        <Text style={styles.section}>Auction</Text>
-        <View style={styles.row}>
-          <Field
-            label="Start price (USD)"
-            value={startPrice}
-            onChangeText={setStartPrice}
-            placeholder="1000"
-            keyboardType="decimal-pad"
-            flex
-          />
-          <Field
-            label="Min. increment"
-            value={minIncrement}
-            onChangeText={setMinIncrement}
-            placeholder="50"
-            keyboardType="decimal-pad"
-            flex
-          />
-        </View>
-        <Field
-          label="Reserve price (optional)"
-          value={reserve}
-          onChangeText={setReserve}
-          placeholder="No reserve"
-          keyboardType="decimal-pad"
-        />
-
-        <Text style={styles.label}>Duration</Text>
-        <View style={styles.chips}>
-          {DURATIONS.map((d) => {
-            const active = d.seconds === durationSeconds;
-            return (
+      {/* Photos */}
+      <Text style={styles.section}>Photos</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: space.sm }}>
+        <View style={styles.photoRow}>
+          {photos.map((p, i) => (
+            <View key={`${p.uri}-${i}`} style={styles.thumb}>
+              <Image source={{ uri: p.uri }} style={styles.thumbImg} contentFit="cover" />
               <Pressable
-                key={d.seconds}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setDurationSeconds(d.seconds)}
+                style={styles.thumbRemove}
+                onPress={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                hitSlop={8}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.label}</Text>
+                <Text style={styles.thumbRemoveText}>×</Text>
               </Pressable>
-            );
-          })}
+            </View>
+          ))}
+          {photos.length < 12 ? (
+            <Pressable style={styles.addTile} onPress={() => void pickPhotos()}>
+              <Text style={styles.addPlus}>＋</Text>
+              <Text style={styles.addLabel}>Add</Text>
+            </Pressable>
+          ) : null}
         </View>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.btn,
-            busy && styles.btnDisabled,
-            pressed && !busy && styles.btnPressed,
-          ]}
-          onPress={() => void submit()}
-          disabled={busy}
-        >
-          <Text style={styles.btnText}>
-            {busy ? (progress ?? "Working…") : "Publish & start auction"}
-          </Text>
-        </Pressable>
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Details */}
+      <Text style={styles.section}>Gem details</Text>
+      <Field
+        label="Title"
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Ceylon Blue Sapphire"
+      />
+      <View style={styles.row}>
+        <Field label="Type" value={type} onChangeText={setType} placeholder="sapphire" flex />
+        <Field
+          label="Carat"
+          value={carat}
+          onChangeText={setCarat}
+          placeholder="2.5"
+          keyboardType="decimal-pad"
+          flex
+        />
+      </View>
+      <View style={styles.row}>
+        <Field label="Color" value={color} onChangeText={setColor} placeholder="Blue" flex />
+        <Field label="Clarity" value={clarity} onChangeText={setClarity} placeholder="VS" flex />
+      </View>
+      <View style={styles.row}>
+        <Field label="Cut" value={cut} onChangeText={setCut} placeholder="Oval" flex />
+        <Field
+          label="Origin"
+          value={origin}
+          onChangeText={setOrigin}
+          placeholder="Sri Lanka"
+          flex
+        />
+      </View>
+      <Field
+        label="Description"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Notes on the stone…"
+        multiline
+      />
+
+      {/* Auction */}
+      <Text style={styles.section}>Auction</Text>
+      <View style={styles.row}>
+        <Field
+          label="Start price (USD)"
+          value={startPrice}
+          onChangeText={setStartPrice}
+          placeholder="1000"
+          keyboardType="decimal-pad"
+          flex
+        />
+        <Field
+          label="Min. increment"
+          value={minIncrement}
+          onChangeText={setMinIncrement}
+          placeholder="50"
+          keyboardType="decimal-pad"
+          flex
+        />
+      </View>
+      <Field
+        label="Reserve price (optional)"
+        value={reserve}
+        onChangeText={setReserve}
+        placeholder="No reserve"
+        keyboardType="decimal-pad"
+      />
+
+      <Text style={styles.label}>Duration</Text>
+      <View style={styles.chips}>
+        {DURATIONS.map((d) => {
+          const active = d.seconds === durationSeconds;
+          return (
+            <Pressable
+              key={d.seconds}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => setDurationSeconds(d.seconds)}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.btn,
+          busy && styles.btnDisabled,
+          pressed && !busy && styles.btnPressed,
+        ]}
+        onPress={() => void submit()}
+        disabled={busy}
+      >
+        <Text style={styles.btnText}>
+          {busy ? (progress ?? "Working…") : "Publish & start auction"}
+        </Text>
+      </Pressable>
+    </KeyboardAwareScrollView>
   );
 }
 

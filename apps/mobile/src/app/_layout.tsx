@@ -4,28 +4,31 @@ import "react-native-url-polyfill/auto";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AuthProvider } from "@/lib/auth";
 import { theme } from "@/lib/theme";
 
 export default function RootLayout(): React.ReactElement {
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: theme.bg },
-          headerTintColor: theme.text,
-          headerTitleStyle: { fontWeight: "700" },
-          contentStyle: { backgroundColor: theme.bg },
-        }}
-      >
-        <Stack.Screen name="index" options={{ title: "Gem — Live Auctions" }} />
-        <Stack.Screen name="sell" options={{ title: "New listing" }} />
-        <Stack.Screen name="profile" options={{ title: "Profile" }} />
-        <Stack.Screen name="login" options={{ title: "Sign in" }} />
-        <Stack.Screen name="register" options={{ title: "Create account" }} />
-        <Stack.Screen name="auctions/[id]" options={{ title: "Auction" }} />
-      </Stack>
-    </AuthProvider>
+    <KeyboardProvider>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: theme.bg },
+            headerTintColor: theme.text,
+            headerTitleStyle: { fontWeight: "700" },
+            contentStyle: { backgroundColor: theme.bg },
+          }}
+        >
+          <Stack.Screen name="index" options={{ title: "Gem — Live Auctions" }} />
+          <Stack.Screen name="sell" options={{ title: "New listing" }} />
+          <Stack.Screen name="profile" options={{ title: "Profile" }} />
+          <Stack.Screen name="login" options={{ title: "Sign in" }} />
+          <Stack.Screen name="register" options={{ title: "Create account" }} />
+          <Stack.Screen name="auctions/[id]" options={{ title: "Auction" }} />
+        </Stack>
+      </AuthProvider>
+    </KeyboardProvider>
   );
 }
