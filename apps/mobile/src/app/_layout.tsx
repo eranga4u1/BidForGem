@@ -20,6 +20,7 @@ export default function RootLayout(): React.ReactElement {
         }}
       >
         <Stack.Screen name="index" options={{ title: "Gem — Live Auctions" }} />
+        <Stack.Screen name="sell" options={{ title: "New listing" }} />
         <Stack.Screen name="profile" options={{ title: "Profile" }} />
         <Stack.Screen name="login" options={{ title: "Sign in" }} />
         <Stack.Screen name="register" options={{ title: "Create account" }} />

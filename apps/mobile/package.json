@@ -13,15 +13,17 @@
     "eas-build-post-install": "cd ../.. && pnpm --filter @gem/contracts build && pnpm --filter @gem/api-client build"
   },
   "dependencies": {
+    "@expo/ui": "~57.0.10",
     "@gem/api-client": "workspace:*",
     "@gem/contracts": "workspace:*",
-    "@expo/ui": "~57.0.10",
     "expo": "~57.0.12",
     "expo-constants": "~57.0.10",
     "expo-device": "~57.0.1",
+    "expo-file-system": "~57.0.6",
     "expo-font": "~57.0.1",
     "expo-glass-effect": "~57.0.1",
     "expo-image": "~57.0.2",
+    "expo-image-picker": "~57.0.16",
     "expo-linking": "~57.0.5",
     "expo-router": "~57.0.12",
     "expo-secure-store": "~57.0.1",

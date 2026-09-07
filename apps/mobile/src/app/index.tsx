@@ -66,17 +66,22 @@ export default function BrowseScreen(): React.ReactElement {
           </Text>
         </View>
         {status === "authenticated" ? (
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
-          >
-            <View style={styles.avatar}>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => router.push("/sell")}
+              style={({ pressed }) => [styles.sellBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.sellBtnText}>＋ Sell</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/profile")}
+              style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+            >
               <Text style={styles.avatarText}>
                 {(user?.name?.trim()?.[0] ?? "Y").toUpperCase()}
               </Text>
-            </View>
-            <Text style={styles.badgeText}>{user?.name?.split(" ")[0] ?? "You"}</Text>
-          </Pressable>
+            </Pressable>
+          </View>
         ) : (
           <Pressable
             onPress={() => router.push("/login")}
@@ -232,15 +237,23 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   avatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.brand,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: { color: theme.ink, fontWeight: "900", fontSize: 13 },
   badgeText: { color: theme.text, fontWeight: "800", fontSize: 13 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  sellBtn: {
+    backgroundColor: theme.brand,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  sellBtnText: { color: theme.ink, fontWeight: "900", fontSize: 13 },
   signIn: {
     backgroundColor: theme.brand,
     borderRadius: radius.pill,
