@@ -15,3 +15,4 @@ export * from "./auctions.js";
 export * from "./notifications.js";
 export * from "./billing.js";
 export * from "./socket.js";
+export * from "./me.js";

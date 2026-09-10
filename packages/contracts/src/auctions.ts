@@ -55,6 +55,14 @@ export type PlaceBidInputDto = z.infer<typeof placeBidInputSchema>;
 
 export const auctionFilterSchema = z.object({
   status: auctionStatusSchema.optional(),
+  /**
+   * Coarse browse filter: `live` = active only, `ended` = finished
+   * (closed/sold/canceled), `all` = no status filter. Applied on top of an
+   * explicit `status` when both are given.
+   */
+  state: z.enum(["live", "ended", "all"]).optional(),
+  /** `ending_soon` (default) sorts by soonest deadline; `newest` by most recently started. */
+  sort: z.enum(["ending_soon", "newest"]).optional(),
   /** All auctions for a single gem (e.g. to resolve a gem's live auction). */
   gemId: z.uuid().optional(),
   gemType: z.string().trim().optional(),

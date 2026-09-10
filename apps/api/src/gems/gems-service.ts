@@ -1,16 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import {
   caratMilliFromCarat,
   createGemInputSchema,
   gemFilterSchema,
   updateGemInputSchema,
+  type ListingAuction,
+  type MyListing,
   type PostingFee,
   type PublicGem,
 } from "@gem/contracts";
 import type { ZodError } from "zod";
 import { resolvePostingFee } from "../billing/posting-fee.js";
-import { gems, media, type Gem } from "../db/schema.js";
+import { auctions, bids, gems, media, type Gem } from "../db/schema.js";
 import type { SettingsService } from "../settings/settings-service.js";
 import { isDeleted, isGemLocked, loadGem, readyMedia, type Db } from "./access.js";
 import { toPublicGem } from "./mappers.js";
@@ -39,6 +41,10 @@ export type ListGemsResult =
   | { ok: true; items: PublicGem[]; limit: number; offset: number }
   | { ok: false; reason: "INVALID_INPUT"; issues: Issues };
 
+export type ListMineResult =
+  | { ok: true; items: MyListing[]; limit: number; offset: number }
+  | { ok: false; reason: "INVALID_INPUT"; issues: Issues };
+
 export interface GemsService {
   create(sellerId: string, input: unknown): Promise<CreateGemResult>;
   get(viewerId: string | null, gemId: string): Promise<GetGemResult>;
@@ -46,6 +52,7 @@ export interface GemsService {
   remove(sellerId: string, gemId: string): Promise<DeleteGemResult>;
   publish(sellerId: string, gemId: string): Promise<PublishGemResult>;
   list(viewerId: string | null, filters: unknown): Promise<ListGemsResult>;
+  listMine(sellerId: string, filters: unknown): Promise<ListMineResult>;
 }
 
 export interface GemsServiceDeps {
@@ -214,6 +221,78 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
       const items = rows.map((r) => toPublicGem(r, mediaByGem.get(r.id) ?? []));
       // `viewerId` reserved for future per-viewer visibility; drafts already excluded.
       void viewerId;
+      return { ok: true, items, limit: f.limit, offset: f.offset };
+    },
+
+    async listMine(sellerId, rawFilters) {
+      const parsed = gemFilterSchema.safeParse(rawFilters ?? {});
+      if (!parsed.success)
+        return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
+      const f = parsed.data;
+
+      // The seller's own gems in EVERY status (drafts included), newest first.
+      const rows = await db
+        .select()
+        .from(gems)
+        .where(and(eq(gems.sellerId, sellerId), isNull(gems.deletedAt)))
+        .orderBy(desc(gems.createdAt))
+        .limit(f.limit)
+        .offset(f.offset);
+
+      const ids = rows.map((r) => r.id);
+      const mediaByGem = new Map<string, (typeof media.$inferSelect)[]>();
+      const auctionByGem = new Map<string, ListingAuction>();
+      if (ids.length > 0) {
+        const mediaRows = await db
+          .select()
+          .from(media)
+          .where(and(inArray(media.gemId, ids), eq(media.status, "ready")));
+        for (const m of mediaRows) {
+          const list = mediaByGem.get(m.gemId) ?? [];
+          list.push(m);
+          mediaByGem.set(m.gemId, list);
+        }
+
+        // Latest auction per gem (by start_at) with a bid count.
+        const aRows = await db
+          .select({
+            id: auctions.id,
+            gemId: auctions.gemId,
+            status: auctions.status,
+            endAt: auctions.endAt,
+            highestBid: auctions.highestBid,
+          })
+          .from(auctions)
+          .where(inArray(auctions.gemId, ids))
+          .orderBy(desc(auctions.startAt));
+
+        const bidCounts = new Map<string, number>();
+        const aIds = aRows.map((a) => a.id);
+        if (aIds.length > 0) {
+          const counts = await db
+            .select({ auctionId: bids.auctionId, n: sql<string>`count(*)` })
+            .from(bids)
+            .where(inArray(bids.auctionId, aIds))
+            .groupBy(bids.auctionId);
+          for (const c of counts) bidCounts.set(c.auctionId, Number(c.n));
+        }
+        for (const a of aRows) {
+          if (!auctionByGem.has(a.gemId)) {
+            auctionByGem.set(a.gemId, {
+              id: a.id,
+              status: a.status,
+              endAt: a.endAt,
+              highestBid: a.highestBid,
+              bidCount: bidCounts.get(a.id) ?? 0,
+            });
+          }
+        }
+      }
+
+      const items: MyListing[] = rows.map((r) => ({
+        gem: toPublicGem(r, mediaByGem.get(r.id) ?? []),
+        auction: auctionByGem.get(r.id) ?? null,
+      }));
       return { ok: true, items, limit: f.limit, offset: f.offset };
     },
   };

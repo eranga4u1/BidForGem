@@ -40,6 +40,12 @@ export class AuctionsController {
     return unwrap(await this.auctions.list(query));
   }
 
+  @Get("my-bids")
+  @UseGuards(AuthGuard)
+  async myBids(@CurrentUser() user: PublicUser, @Query() query: unknown) {
+    return unwrap(await this.auctions.listMyBids(user.id, query));
+  }
+
   @Get(":id")
   async get(@Param("id") id: string) {
     return unwrap(await this.auctions.get(id));

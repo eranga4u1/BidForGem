@@ -1,17 +1,34 @@
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import {
   auctionFilterSchema,
   bidHistoryQuerySchema,
   createAuctionInputSchema,
   type BidHistoryItem,
+  type BidOutcome,
+  type MyBid,
   type PublicAuction,
 } from "@gem/contracts";
 import type { ZodError } from "zod";
-import { auctions, bids, gems, users } from "../db/schema.js";
+import { auctions, bids, gems, media, users } from "../db/schema.js";
 import { isDeleted, loadGem, type Db } from "../gems/access.js";
 import { toBidHistoryItem, toPublicAuction } from "./mappers.js";
 
 type Issues = ZodError["issues"];
+
+/** Ended statuses used by the coarse `state=ended` browse filter. */
+const ENDED_STATUSES = ["closed", "sold", "canceled"] as const;
+
+/** The signed-in user's standing in an auction, from its status + winner. */
+function bidOutcome(
+  status: string,
+  highestBidderId: string | null,
+  winnerId: string | null,
+  userId: string,
+): BidOutcome {
+  if (status === "active") return highestBidderId === userId ? "leading" : "outbid";
+  if (status === "sold") return winnerId === userId ? "won" : "lost";
+  return "ended";
+}
 
 export type CreateAuctionResult =
   | { ok: true; auction: PublicAuction }
@@ -46,12 +63,17 @@ export type BidHistoryResult =
   | { ok: false; reason: "INVALID_INPUT"; issues: Issues }
   | { ok: false; reason: "NOT_FOUND" };
 
+export type MyBidsResult =
+  | { ok: true; items: MyBid[]; limit: number; offset: number }
+  | { ok: false; reason: "INVALID_INPUT"; issues: Issues };
+
 export interface AuctionsService {
   create(sellerId: string, input: unknown): Promise<CreateAuctionResult>;
   get(auctionId: string): Promise<GetAuctionResult>;
   list(filters: unknown): Promise<ListAuctionsResult>;
   cancel(sellerId: string, auctionId: string): Promise<CancelAuctionResult>;
   bidHistory(auctionId: string, query: unknown): Promise<BidHistoryResult>;
+  listMyBids(userId: string, query: unknown): Promise<MyBidsResult>;
 }
 
 export interface AuctionsServiceDeps {
@@ -158,16 +180,20 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
 
       const conditions = [];
       if (f.status) conditions.push(eq(auctions.status, f.status));
+      if (f.state === "live") conditions.push(eq(auctions.status, "active"));
+      else if (f.state === "ended") conditions.push(inArray(auctions.status, [...ENDED_STATUSES]));
       if (f.gemId) conditions.push(eq(auctions.gemId, f.gemId));
       if (f.endingBefore) conditions.push(lte(auctions.endAt, f.endingBefore));
       if (f.gemType) conditions.push(eq(gems.type, f.gemType));
+
+      const orderBy = f.sort === "newest" ? desc(auctions.startAt) : auctions.endAt;
 
       const rows = await db
         .select({ auction: auctions })
         .from(auctions)
         .innerJoin(gems, eq(gems.id, auctions.gemId))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(auctions.endAt)
+        .orderBy(orderBy)
         .limit(f.limit)
         .offset(f.offset);
 
@@ -230,6 +256,73 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
         limit: parsed.data.limit,
         offset: parsed.data.offset,
       };
+    },
+
+    async listMyBids(userId, rawQuery) {
+      const parsed = bidHistoryQuerySchema.safeParse(rawQuery ?? {});
+      if (!parsed.success) {
+        return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
+      }
+      const { limit, offset } = parsed.data;
+
+      // One row per auction the user has bid on: their highest bid + the
+      // auction's current standing, newest activity first.
+      const rows = await db
+        .select({
+          auctionId: auctions.id,
+          gemId: auctions.gemId,
+          gemTitle: gems.title,
+          currency: auctions.currency,
+          status: auctions.status,
+          endAt: auctions.endAt,
+          highestBid: auctions.highestBid,
+          highestBidderId: auctions.highestBidderId,
+          winnerId: auctions.winnerId,
+          myMaxBid: sql<string>`max(${bids.amount})`,
+          lastBidAt: sql<string>`max(${bids.createdAt})`,
+        })
+        .from(bids)
+        .innerJoin(auctions, eq(auctions.id, bids.auctionId))
+        .innerJoin(gems, eq(gems.id, auctions.gemId))
+        .where(eq(bids.bidderId, userId))
+        .groupBy(auctions.id, gems.id)
+        .orderBy(desc(sql`max(${bids.createdAt})`))
+        .limit(limit)
+        .offset(offset);
+
+      const gemIds = rows.map((r) => r.gemId);
+      const photoByGem = new Map<string, string>();
+      if (gemIds.length > 0) {
+        const photos = await db
+          .select({ gemId: media.gemId, url: media.url })
+          .from(media)
+          .where(
+            and(
+              inArray(media.gemId, gemIds),
+              eq(media.type, "photo"),
+              eq(media.status, "ready"),
+              isNotNull(media.url),
+            ),
+          );
+        for (const p of photos) {
+          if (p.url && !photoByGem.has(p.gemId)) photoByGem.set(p.gemId, p.url);
+        }
+      }
+
+      const items: MyBid[] = rows.map((r) => ({
+        auctionId: r.auctionId,
+        gemId: r.gemId,
+        gemTitle: r.gemTitle,
+        photoUrl: photoByGem.get(r.gemId) ?? null,
+        currency: r.currency,
+        myMaxBid: Number(r.myMaxBid),
+        highestBid: r.highestBid,
+        status: r.status,
+        endAt: r.endAt,
+        lastBidAt: new Date(r.lastBidAt),
+        outcome: bidOutcome(r.status, r.highestBidderId, r.winnerId, userId),
+      }));
+      return { ok: true, items, limit, offset };
     },
   };
 }

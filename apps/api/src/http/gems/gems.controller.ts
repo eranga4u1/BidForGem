@@ -34,6 +34,12 @@ export class GemsController {
     return unwrap(await this.gems.list(user?.id ?? null, query));
   }
 
+  @Get("mine")
+  @UseGuards(AuthGuard)
+  async mine(@CurrentUser() user: PublicUser, @Query() query: unknown) {
+    return unwrap(await this.gems.listMine(user.id, query));
+  }
+
   @Get(":id")
   @UseGuards(OptionalAuthGuard)
   async get(@CurrentUser() user: PublicUser | null, @Param("id") id: string) {

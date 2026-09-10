@@ -11,12 +11,16 @@ import {
   auctionListResponseSchema,
   bidHistoryResponseSchema,
   notificationListResponseSchema,
+  myBidsResponseSchema,
+  myListingsResponseSchema,
   postingFeeSettingsResponseSchema,
   okResponseSchema,
   errorEnvelopeSchema,
   type AuthSessionResponse,
   type AuthTokens,
   type BidHistoryItem,
+  type MyBid,
+  type MyListing,
   type PostingFeeSettings,
   type PostingFeeUpdateInput,
   type PublicAuction,
@@ -79,6 +83,8 @@ export interface GemApiClient {
     update(id: string, input: unknown, opts?: RequestOptions): Promise<PublicGem>;
     remove(id: string, opts?: RequestOptions): Promise<void>;
     publish(id: string, opts?: RequestOptions): Promise<PublicGem>;
+    /** The signed-in user's own listings (all statuses), with each gem's auction. */
+    mine(query?: Query, opts?: RequestOptions): Promise<Page<MyListing>>;
   };
   media: {
     requestUpload(
@@ -101,6 +107,8 @@ export interface GemApiClient {
     cancel(id: string, opts?: RequestOptions): Promise<PublicAuction>;
     bids(id: string, query?: Query, opts?: RequestOptions): Promise<Page<BidHistoryItem>>;
     placeBid(id: string, amount: number, opts?: RequestOptions): Promise<PublicAuction>;
+    /** The signed-in user's bids across auctions (one row per auction). */
+    myBids(query?: Query, opts?: RequestOptions): Promise<Page<MyBid>>;
   };
   notifications: {
     list(query?: Query, opts?: RequestOptions): Promise<Page<PublicNotification>>;
@@ -393,6 +401,14 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
           auth: "required",
           signal: opts?.signal,
         }).then((r) => r.gem),
+      mine: (query, opts) =>
+        request({
+          path: "/gems/mine",
+          query,
+          schema: myListingsResponseSchema,
+          auth: "required",
+          signal: opts?.signal,
+        }).then(page),
     },
 
     media: {
@@ -477,6 +493,14 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
           auth: "required",
           signal: opts?.signal,
         }).then((r) => r.auction),
+      myBids: (query, opts) =>
+        request({
+          path: "/auctions/my-bids",
+          query,
+          schema: myBidsResponseSchema,
+          auth: "required",
+          signal: opts?.signal,
+        }).then(page),
     },
 
     notifications: {
