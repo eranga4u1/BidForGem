@@ -26,9 +26,17 @@ const EMPTY: Filters = {
   caratMax: "",
 };
 
+// Coarse availability filter mapped onto gem status.
+const STATUS_TABS = [
+  { key: "", label: "All" },
+  { key: "active", label: "Available" },
+  { key: "sold", label: "Sold" },
+] as const;
+
 export default function BrowsePage(): React.ReactElement {
   const [draft, setDraft] = useState<Filters>(EMPTY);
   const [applied, setApplied] = useState<Filters>(EMPTY);
+  const [statusFilter, setStatusFilter] = useState("");
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<PublicGem[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -45,6 +53,7 @@ export default function BrowsePage(): React.ReactElement {
         origin: applied.origin,
         caratMin: applied.caratMin,
         caratMax: applied.caratMax,
+        status: statusFilter,
         limit: LIMIT,
         offset,
       });
@@ -54,7 +63,7 @@ export default function BrowsePage(): React.ReactElement {
     } catch {
       setState("error");
     }
-  }, [applied, offset]);
+  }, [applied, statusFilter, offset]);
 
   useEffect(() => {
     void load();
@@ -69,6 +78,21 @@ export default function BrowsePage(): React.ReactElement {
         <div>
           <div className="eyebrow">Marketplace</div>
           <h1>Browse gems</h1>
+        </div>
+        <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+          {STATUS_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`btn btn-sm ${statusFilter === t.key ? "" : "btn-ghost"}`}
+              onClick={() => {
+                setStatusFilter(t.key);
+                setOffset(0);
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 

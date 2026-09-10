@@ -259,6 +259,7 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
             id: auctions.id,
             gemId: auctions.gemId,
             status: auctions.status,
+            currency: auctions.currency,
             endAt: auctions.endAt,
             highestBid: auctions.highestBid,
           })
@@ -281,6 +282,7 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
             auctionByGem.set(a.gemId, {
               id: a.id,
               status: a.status,
+              currency: a.currency,
               endAt: a.endAt,
               highestBid: a.highestBid,
               bidCount: bidCounts.get(a.id) ?? 0,

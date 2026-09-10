@@ -33,6 +33,7 @@ export type MyBidsResponse = z.infer<typeof myBidsResponseSchema>;
 export const listingAuctionSchema = z.object({
   id: z.uuid(),
   status: auctionStatusSchema,
+  currency: z.string(),
   endAt: z.coerce.date(),
   highestBid: z.number().int().nullable(),
   bidCount: z.number().int(),

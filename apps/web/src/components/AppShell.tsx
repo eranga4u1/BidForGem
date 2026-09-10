@@ -50,6 +50,8 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
           <nav className="nav-links">
             <NavLink href="/gems" label="Browse" />
             {status === "authenticated" && <NavLink href="/gems/new" label="Sell" />}
+            {status === "authenticated" && <NavLink href="/listings" label="My listings" />}
+            {status === "authenticated" && <NavLink href="/bids" label="My bids" />}
             {status === "authenticated" && (
               <Link
                 href="/notifications"
