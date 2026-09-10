@@ -48,6 +48,19 @@ export default function ProfileScreen(): React.ReactElement {
 
       <Pressable
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+        onPress={() => router.push("/my-listings")}
+      >
+        <Text style={styles.secondaryText}>My listings</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+        onPress={() => router.push("/my-bids")}
+      >
+        <Text style={styles.secondaryText}>My bids</Text>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
         onPress={() => void onSignOut()}
       >
         <Text style={styles.secondaryText}>Sign out</Text>

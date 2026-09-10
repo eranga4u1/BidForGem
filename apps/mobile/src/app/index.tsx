@@ -22,11 +22,12 @@ export default function BrowseScreen(): React.ReactElement {
   const [rows, setRows] = useState<Row[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<"all" | "live" | "ended">("all");
 
   const load = useCallback(async () => {
     try {
       const [auctions, gems] = await Promise.all([
-        api.auctions.list({ limit: 50 }),
+        api.auctions.list({ state: filter, sort: "newest", limit: 50 }),
         api.gems.list({ limit: 50 }),
       ]);
       const byId = new Map(gems.items.map((g) => [g.id, g]));
@@ -35,7 +36,7 @@ export default function BrowseScreen(): React.ReactElement {
     } catch {
       setState("error");
     }
-  }, []);
+  }, [filter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,6 +91,25 @@ export default function BrowseScreen(): React.ReactElement {
             <Text style={styles.signInText}>Sign in</Text>
           </Pressable>
         )}
+      </View>
+
+      <View style={styles.chips}>
+        {(["all", "live", "ended"] as const).map((k) => (
+          <Pressable
+            key={k}
+            style={[styles.chip, filter === k && styles.chipActive]}
+            onPress={() => {
+              if (k !== filter) {
+                setFilter(k);
+                setState("loading");
+              }
+            }}
+          >
+            <Text style={[styles.chipText, filter === k && styles.chipTextActive]}>
+              {k === "all" ? "All" : k === "live" ? "Live" : "Ended"}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {state === "loading" ? (
@@ -261,4 +281,21 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm + 2,
   },
   signInText: { color: theme.ink, fontWeight: "900", fontSize: 13 },
+  chips: {
+    flexDirection: "row",
+    gap: space.sm,
+    paddingHorizontal: space.lg + 2,
+    paddingBottom: space.sm,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    backgroundColor: theme.card,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm - 2,
+  },
+  chipActive: { backgroundColor: theme.brand, borderColor: theme.brand },
+  chipText: { color: theme.muted, fontSize: 13, fontWeight: "700" },
+  chipTextActive: { color: theme.ink },
 });
