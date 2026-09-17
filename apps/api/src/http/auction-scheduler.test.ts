@@ -60,3 +60,50 @@ describe("AuctionScheduler.tick", () => {
     expect(result.closed).toBe(2);
   });
 });
+
+describe("AuctionScheduler.nextDelayMs (adaptive sleep)", () => {
+  let db: AnyDb;
+  let close: () => Promise<void>;
+  const noopCloser = { close: () => Promise.resolve() } as unknown as AuctionCloserService;
+
+  beforeEach(async () => {
+    const t = await makeTestDb();
+    db = t.db;
+    close = t.close;
+  });
+  afterEach(async () => {
+    await close();
+  });
+
+  async function activeAuction(endAt: Date): Promise<void> {
+    const seller = await insertUser(db);
+    const gem = await insertGem(db, seller.id, { status: "active" });
+    await insertAuction(db, gem.id, {
+      status: "active",
+      startAt: new Date(Date.now() - 3_600_000),
+      endAt,
+    });
+  }
+
+  it("sleeps the full max delay when nothing is active", async () => {
+    const scheduler = new AuctionScheduler(db, noopCloser);
+    // Default max delay is 10 minutes.
+    expect(await scheduler.nextDelayMs()).toBe(600_000);
+  });
+
+  it("sleeps until the soonest active auction's end time", async () => {
+    await activeAuction(new Date(Date.now() + 120_000)); // ends in ~2 min
+    await activeAuction(new Date(Date.now() + 600_000)); // ends later
+    const scheduler = new AuctionScheduler(db, noopCloser);
+    const delay = await scheduler.nextDelayMs();
+    // Clamped to the soonest end (~120s), not the full max.
+    expect(delay).toBeGreaterThan(60_000);
+    expect(delay).toBeLessThanOrEqual(120_000);
+  });
+
+  it("floors at the min delay when an auction is already due", async () => {
+    await activeAuction(new Date(Date.now() - 60_000)); // already past
+    const scheduler = new AuctionScheduler(db, noopCloser);
+    expect(await scheduler.nextDelayMs()).toBe(1_000);
+  });
+});
