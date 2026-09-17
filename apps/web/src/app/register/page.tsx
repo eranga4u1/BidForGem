@@ -32,6 +32,10 @@ export default function RegisterPage(): React.ReactElement {
         Array.isArray(err.details)
       ) {
         setError((err.details as Issue[])[0]?.message ?? "Please check your details.");
+      } else if (err instanceof GemApiError && err.code === "EMAIL_IN_USE") {
+        setError(
+          "You already have an account with this email. Try signing in or resetting your password.",
+        );
       } else if (err instanceof GemApiError && err.code === "REGISTRATION_FAILED") {
         setError("Could not register with those details.");
       } else {

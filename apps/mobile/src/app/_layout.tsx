@@ -28,6 +28,7 @@ export default function RootLayout(): React.ReactElement {
           <Stack.Screen name="profile" options={{ title: "Profile" }} />
           <Stack.Screen name="login" options={{ title: "Sign in" }} />
           <Stack.Screen name="register" options={{ title: "Create account" }} />
+          <Stack.Screen name="forgot-password" options={{ title: "Reset password" }} />
           <Stack.Screen name="auctions/[id]" options={{ title: "Auction" }} />
         </Stack>
       </AuthProvider>

@@ -23,6 +23,7 @@ const MESSAGES: Record<string, string> = {
   INVALID_INPUT: "Validation failed.",
   INVALID_CREDENTIALS: "Incorrect email or password.",
   REGISTRATION_FAILED: "Registration failed.",
+  EMAIL_IN_USE: "An account with this email already exists.",
   RATE_LIMITED: "Too many requests. Please slow down.",
   AUCTION_NOT_FOUND: "Auction not found.",
   NOT_FOUND: "Not found.",
@@ -60,6 +61,7 @@ const MESSAGES: Record<string, string> = {
 const STATUS: Record<string, number> = {
   INVALID_INPUT: 400,
   REGISTRATION_FAILED: 400,
+  EMAIL_IN_USE: 409,
   INVALID_CREDENTIALS: 401,
   UNAUTHORIZED: 401,
   MISSING_TOKEN: 401,

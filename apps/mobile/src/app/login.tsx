@@ -67,6 +67,9 @@ export default function LoginScreen(): React.ReactElement {
         >
           <Text style={s.btnText}>{busy ? "Signing in…" : "Sign in"}</Text>
         </Pressable>
+        <Pressable onPress={() => router.push("/forgot-password")}>
+          <Text style={s.link}>Forgot password?</Text>
+        </Pressable>
         <Pressable onPress={() => router.replace("/register")}>
           <Text style={s.link}>No account? Create one</Text>
         </Pressable>

@@ -13,20 +13,27 @@ export default function RegisterScreen(): React.ReactElement {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function submit(): Promise<void> {
     setError(null);
+    setEmailTaken(false);
     setBusy(true);
     try {
       await register(name.trim(), email.trim(), password);
       router.back();
     } catch (err) {
-      const detail =
-        err instanceof GemApiError && Array.isArray(err.details)
-          ? (err.details[0] as { message?: string })?.message
-          : undefined;
-      setError(detail ?? "Couldn’t create the account. Please try again.");
+      if (err instanceof GemApiError && err.code === "EMAIL_IN_USE") {
+        setEmailTaken(true);
+        setError("You already have an account with this email.");
+      } else {
+        const detail =
+          err instanceof GemApiError && Array.isArray(err.details)
+            ? (err.details[0] as { message?: string })?.message
+            : undefined;
+        setError(detail ?? "Couldn’t create the account. Please try again.");
+      }
     } finally {
       setBusy(false);
     }
@@ -69,6 +76,11 @@ export default function RegisterScreen(): React.ReactElement {
           placeholderTextColor={theme.faint}
         />
         {error && <Text style={s.error}>{error}</Text>}
+        {emailTaken ? (
+          <Pressable onPress={() => router.replace("/login")}>
+            <Text style={s.link}>Sign in instead, or reset your password</Text>
+          </Pressable>
+        ) : null}
         <Pressable
           style={[s.btn, busy && s.btnDisabled]}
           onPress={() => void submit()}

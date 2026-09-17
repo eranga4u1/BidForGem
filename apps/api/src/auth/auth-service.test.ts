@@ -71,14 +71,14 @@ describe("AuthService", () => {
       if (!res.ok) expect(res.reason).toBe("INVALID_INPUT");
     });
 
-    it("rejects a duplicate email generically, without leaking existence", async () => {
+    it("rejects a duplicate email with EMAIL_IN_USE", async () => {
       await register("dupe@example.com");
       const again = await auth.register({
         name: "Other",
         email: "dupe@example.com",
         password: VALID_PASSWORD,
       });
-      expect(again).toEqual({ ok: false, reason: "REGISTRATION_FAILED" });
+      expect(again).toEqual({ ok: false, reason: "EMAIL_IN_USE" });
     });
   });
 

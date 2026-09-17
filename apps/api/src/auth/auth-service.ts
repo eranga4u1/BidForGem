@@ -43,7 +43,7 @@ type ValidationIssues = ZodError["issues"];
 export type RegisterResult =
   | { ok: true; user: PublicUser; tokens: AuthTokens }
   | { ok: false; reason: "INVALID_INPUT"; issues: ValidationIssues }
-  | { ok: false; reason: "RATE_LIMITED" | "REGISTRATION_FAILED" };
+  | { ok: false; reason: "RATE_LIMITED" | "REGISTRATION_FAILED" | "EMAIL_IN_USE" };
 
 export type LoginResult =
   | { ok: true; user: PublicUser; tokens: AuthTokens }
@@ -167,8 +167,10 @@ export function createAuthService<T extends PgQueryResultHKT>(
         });
       } catch (err) {
         if (isUniqueViolation(err)) {
-          // Generic failure — do not reveal that the email is already registered.
-          return { ok: false, reason: "REGISTRATION_FAILED" };
+          // The email is already registered. We surface this explicitly (rather
+          // than a generic failure) as a deliberate product choice: clearer UX,
+          // at the cost of allowing email enumeration on this endpoint.
+          return { ok: false, reason: "EMAIL_IN_USE" };
         }
         throw err;
       }
