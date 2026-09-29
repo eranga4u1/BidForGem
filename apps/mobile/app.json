@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.bidforgem.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
