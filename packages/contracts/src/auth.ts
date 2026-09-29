@@ -55,10 +55,35 @@ export const emailSchema = z.string().trim().toLowerCase().pipe(z.email());
 
 export const nameSchema = z.string().trim().min(1, "Name is required").max(200);
 
+/**
+ * A contact phone number. Deliberately loose so both local ("077 123 4567")
+ * and international ("+94 77 123 4567") forms work: digits with an optional
+ * leading "+", spaces or hyphens, and 7–15 digits in total (the E.164 max).
+ * Stored trimmed, as entered.
+ */
+export const phoneSchema = z
+  .string()
+  .trim()
+  .regex(/^\+?[\d\s-]+$/, "Enter a valid phone number")
+  .refine((v) => {
+    const digits = v.replace(/\D/g, "").length;
+    return digits >= 7 && digits <= 15;
+  }, "Enter a valid phone number");
+
+/**
+ * An optional phone field: an empty string means "none" (null); omitting the
+ * key leaves the stored value unchanged.
+ */
+const optionalPhoneSchema = z
+  .preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), phoneSchema.nullable())
+  .optional();
+
 export const registerInputSchema = z.object({
   name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
+  /** Optional at sign-up; a seller must have one before publishing a listing. */
+  phone: optionalPhoneSchema,
 });
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 
@@ -76,6 +101,10 @@ export type RefreshInput = z.infer<typeof refreshInputSchema>;
 
 export const updateProfileInputSchema = z.object({
   name: nameSchema,
+  /** Primary contact number. "" / null clears it; omit to keep it unchanged. */
+  phone: optionalPhoneSchema,
+  /** Optional second number (e.g. WhatsApp or a land line). */
+  phone2: optionalPhoneSchema,
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;
 
@@ -111,6 +140,13 @@ export const publicUserSchema = z.object({
   email: z.email(),
   role: userRoleSchema,
   verified: z.boolean(),
+  /**
+   * The user's own contact numbers (this shape is only ever the caller's own).
+   * Default to null when absent so a client that's deployed ahead of the API
+   * (Vercel often finishes before Render) doesn't reject every auth response.
+   */
+  phone: z.string().nullable().default(null),
+  phone2: z.string().nullable().default(null),
   createdAt: z.coerce.date(),
 });
 export type PublicUser = z.infer<typeof publicUserSchema>;

@@ -15,6 +15,36 @@ export const currencySchema = z
 
 export type Currency = z.infer<typeof currencySchema>;
 
+/** The marketplace currency: Sri Lankan rupees. New auctions and fees use it. */
+export const DEFAULT_CURRENCY = "LKR";
+
+/** Currencies shown with a local symbol instead of Intl's code ("LKR 1,500.00"). */
+const LOCAL_SYMBOLS: Readonly<Record<string, string>> = { LKR: "Rs." };
+
+/**
+ * Format integer minor units for display — the ONE formatter web, mobile and
+ * email share. LKR renders like local listings: "Rs. 1,500" for whole rupees,
+ * "Rs. 1,500.50" when there are cents. Other currencies use Intl (en-US).
+ */
+export function formatMoney(minor: number, currency: string): string {
+  const major = minor / 100;
+  const symbol = LOCAL_SYMBOLS[currency];
+  if (symbol) {
+    const whole = minor % 100 === 0;
+    const digits = whole ? 0 : 2;
+    const n = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(major);
+    return `${symbol} ${n}`;
+  }
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(major);
+  } catch {
+    return `${currency} ${major.toFixed(2)}`;
+  }
+}
+
 /** A monetary amount: integer minor units plus a currency. */
 export const moneySchema = z.object({
   amount: z.int().nonnegative(),

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import {
+  DEFAULT_CURRENCY,
   postingFeeUpdateInputSchema,
   postingFeeValueSchema,
   type PostingFeeSettings,
@@ -17,7 +18,7 @@ const POSTING_FEE_KEY = "posting_fee";
 const FREE_SAFE: PostingFeeSettings = {
   enabled: false,
   amount: 0,
-  currency: "USD",
+  currency: DEFAULT_CURRENCY,
   free_until: null,
   free_quota: 0,
 };

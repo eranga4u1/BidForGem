@@ -220,7 +220,7 @@ export function AuctionRoom({
                   <div className="row" style={{ gap: 10 }}>
                     <input
                       inputMode="decimal"
-                      placeholder={(minNext / 100).toFixed(2)}
+                      placeholder={(minNext / 100).toFixed(minNext % 100 === 0 ? 0 : 2)}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       aria-label="Bid amount"

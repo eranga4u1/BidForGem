@@ -1,12 +1,46 @@
+import { phoneSchema } from "@gem/contracts";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { GemApiError, useAuth } from "@/lib/auth";
 import { radius, space, theme } from "@/lib/theme";
 
+/** Same rule the API enforces; blank is allowed (the field is optional). */
+function isValidPhone(value: string): boolean {
+  return !value.trim() || phoneSchema.safeParse(value).success;
+}
+
 export default function ProfileScreen(): React.ReactElement {
   const router = useRouter();
-  const { user, logout, deleteAccount } = useAuth();
+  const { user, logout, deleteAccount, updateProfile } = useAuth();
+  const [phone, setPhone] = useState("");
+  const [phone2, setPhone2] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [contactMsg, setContactMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Prefill with the saved numbers (and re-sync after each save).
+  useEffect(() => {
+    setPhone(user?.phone ?? "");
+    setPhone2(user?.phone2 ?? "");
+  }, [user]);
+
+  async function onSaveContact(): Promise<void> {
+    if (!user) return;
+    if (!isValidPhone(phone) || !isValidPhone(phone2)) {
+      setContactMsg({ ok: false, text: "Use a number like 077 123 4567 or +94 77 123 4567." });
+      return;
+    }
+    setContactMsg(null);
+    setSaving(true);
+    try {
+      await updateProfile({ name: user.name, phone: phone.trim(), phone2: phone2.trim() });
+      setContactMsg({ ok: true, text: "Contact numbers saved." });
+    } catch {
+      setContactMsg({ ok: false, text: "Couldn’t save your numbers. Please try again." });
+    } finally {
+      setSaving(false);
+    }
+  }
   const [confirming, setConfirming] = useState(false);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,6 +78,46 @@ export default function ProfileScreen(): React.ReactElement {
           <Text style={styles.name}>{user?.name ?? "—"}</Text>
           <Text style={styles.email}>{user?.email ?? ""}</Text>
         </View>
+      </View>
+
+      <View style={styles.contactCard}>
+        <Text style={styles.contactTitle}>Contact numbers</Text>
+        <Text style={styles.contactHint}>
+          Signed-in buyers see these on your listings. You need at least one to sell.
+        </Text>
+        <Text style={styles.label}>Contact number</Text>
+        <TextInput
+          style={styles.input}
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          placeholder="077 123 4567"
+          placeholderTextColor={theme.faint}
+        />
+        <Text style={[styles.label, { marginTop: space.md }]}>Second number (optional)</Text>
+        <TextInput
+          style={styles.input}
+          value={phone2}
+          onChangeText={setPhone2}
+          keyboardType="phone-pad"
+          placeholder="WhatsApp or land line"
+          placeholderTextColor={theme.faint}
+        />
+        {contactMsg ? (
+          <Text style={contactMsg.ok ? styles.success : styles.error}>{contactMsg.text}</Text>
+        ) : null}
+        <Pressable
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            saving && styles.disabled,
+            pressed && !saving && styles.pressed,
+          ]}
+          onPress={() => void onSaveContact()}
+          disabled={saving}
+        >
+          <Text style={styles.primaryText}>{saving ? "Saving…" : "Save numbers"}</Text>
+        </Pressable>
       </View>
 
       <Pressable
@@ -193,6 +267,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   error: { color: theme.danger, marginTop: space.sm, fontSize: 14 },
+  success: { color: theme.brand, marginTop: space.sm, fontSize: 14 },
+  contactCard: {
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    borderRadius: radius.lg,
+    padding: space.lg,
+  },
+  contactTitle: { color: theme.text, fontSize: 16, fontWeight: "800" },
+  contactHint: { color: theme.muted, fontSize: 13, lineHeight: 19, marginVertical: space.sm },
+  primaryBtn: {
+    backgroundColor: theme.brand,
+    borderRadius: radius.md,
+    paddingVertical: space.md + 2,
+    alignItems: "center",
+    marginTop: space.md,
+  },
+  primaryText: { color: theme.ink, fontWeight: "900", fontSize: 15 },
   confirmRow: { flexDirection: "row", gap: space.md, marginTop: space.md },
   cancelBtn: {
     borderWidth: 1,

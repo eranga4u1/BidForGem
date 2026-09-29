@@ -9,10 +9,11 @@ import {
   type MyListing,
   type PostingFee,
   type PublicGem,
+  type PublicGemDetail,
 } from "@gem/contracts";
 import type { ZodError } from "zod";
 import { resolvePostingFee } from "../billing/posting-fee.js";
-import { auctions, bids, gems, media, type Gem } from "../db/schema.js";
+import { auctions, bids, gems, media, users, type Gem } from "../db/schema.js";
 import type { SettingsService } from "../settings/settings-service.js";
 import { isDeleted, isGemLocked, loadGem, readyMedia, type Db } from "./access.js";
 import { toPublicGem } from "./mappers.js";
@@ -22,7 +23,7 @@ type Issues = ZodError["issues"];
 export type CreateGemResult =
   { ok: true; gem: PublicGem } | { ok: false; reason: "INVALID_INPUT"; issues: Issues };
 
-export type GetGemResult = { ok: true; gem: PublicGem } | { ok: false; reason: "NOT_FOUND" };
+export type GetGemResult = { ok: true; gem: PublicGemDetail } | { ok: false; reason: "NOT_FOUND" };
 
 export type UpdateGemResult =
   | { ok: true; gem: PublicGem }
@@ -34,7 +35,7 @@ export type DeleteGemResult =
 
 export type PublishGemResult =
   | { ok: true; gem: PublicGem }
-  | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" | "GEM_NOT_DRAFT" }
+  | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" | "GEM_NOT_DRAFT" | "CONTACT_REQUIRED" }
   | { ok: false; reason: "POSTING_FEE_REQUIRED"; fee: PostingFee; paymentIntentRef: string };
 
 export type ListGemsResult =
@@ -73,6 +74,18 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
     return true;
   }
 
+  /** The seller's name and set contact numbers (primary first). */
+  async function loadSeller(sellerId: string): Promise<{ name: string; phones: string[] } | null> {
+    const [row] = await db
+      .select({ name: users.name, phone: users.phone, phone2: users.phone2 })
+      .from(users)
+      .where(eq(users.id, sellerId))
+      .limit(1);
+    if (!row) return null;
+    const phones = [row.phone, row.phone2].filter((p): p is string => Boolean(p));
+    return { name: row.name, phones };
+  }
+
   return {
     async create(sellerId, rawInput) {
       const parsed = createGemInputSchema.safeParse(rawInput);
@@ -101,8 +114,21 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
     async get(viewerId, gemId) {
       const gem = await loadGem(db, gemId);
       if (!gem || !visibleTo(gem, viewerId)) return { ok: false, reason: "NOT_FOUND" };
-      const mediaRows = await readyMedia(db, gemId);
-      return { ok: true, gem: toPublicGem(gem, mediaRows) };
+      const [mediaRows, seller] = await Promise.all([
+        readyMedia(db, gemId),
+        loadSeller(gem.sellerId),
+      ]);
+      return {
+        ok: true,
+        gem: {
+          ...toPublicGem(gem, mediaRows),
+          seller: {
+            name: seller?.name ?? "Unknown seller",
+            // Contact numbers are members-only: disclosed to signed-in viewers.
+            phones: viewerId ? (seller?.phones ?? []) : null,
+          },
+        },
+      };
     },
 
     async update(sellerId, gemId, rawInput) {
@@ -151,6 +177,13 @@ export function createGemsService(deps: GemsServiceDeps): GemsService {
       if (!gem || isDeleted(gem)) return { ok: false, reason: "NOT_FOUND" };
       if (gem.sellerId !== sellerId) return { ok: false, reason: "FORBIDDEN" };
       if (gem.status !== "draft") return { ok: false, reason: "GEM_NOT_DRAFT" };
+
+      // Buyers reach the seller from the listing, so a seller needs at least one
+      // contact number before a listing goes public.
+      const seller = await loadSeller(sellerId);
+      if (!seller || seller.phones.length === 0) {
+        return { ok: false, reason: "CONTACT_REQUIRED" };
+      }
 
       // Posting-fee gate at the point of going public. Flipping free<->paid is a
       // pure data change to app_settings — no code change here.

@@ -1,11 +1,5 @@
-/** Format integer minor units as a currency string. */
-export function formatMoney(minor: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(minor / 100);
-  } catch {
-    return `${(minor / 100).toFixed(2)} ${currency}`;
-  }
-}
+/** Format integer minor units as a currency string ("Rs. 1,500") — shared with mobile + email. */
+export { formatMoney } from "@gem/contracts";
 
 export interface Remaining {
   ended: boolean;

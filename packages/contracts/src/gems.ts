@@ -109,6 +109,28 @@ export const publicGemSchema = z.object({
 });
 export type PublicGem = z.infer<typeof publicGemSchema>;
 
+/**
+ * The seller, as shown on a listing. Attached ONLY to the single-listing GET —
+ * never to browse/list responses — so contact numbers can't be bulk-harvested.
+ * `phones` is null when the viewer isn't signed in (numbers are members-only);
+ * otherwise it's the seller's numbers (possibly empty for legacy listings).
+ */
+export const gemSellerSchema = z.object({
+  name: z.string(),
+  phones: z.array(z.string()).nullable(),
+});
+export type GemSeller = z.infer<typeof gemSellerSchema>;
+
+/**
+ * A listing as returned by GET /gems/:id — a PublicGem plus its seller. The API
+ * always sends `seller`; it's null only when a newer client talks to an older
+ * API mid-deploy, and clients then simply omit the seller card.
+ */
+export const publicGemDetailSchema = publicGemSchema.extend({
+  seller: gemSellerSchema.nullable().default(null),
+});
+export type PublicGemDetail = z.infer<typeof publicGemDetailSchema>;
+
 /** The pre-signed upload instruction returned when an upload URL is issued. */
 export const uploadTicketSchema = z.object({
   mediaId: z.string(),
@@ -121,9 +143,16 @@ export type UploadTicket = z.infer<typeof uploadTicketSchema>;
 
 // --- Response envelopes ---
 
-/** GET/POST/PATCH /gems/:id */
+/** POST/PATCH /gems/:id and publish */
 export const gemResponseSchema = z.object({ ok: z.literal(true), gem: publicGemSchema });
 export type GemResponse = z.infer<typeof gemResponseSchema>;
+
+/** GET /gems/:id — the listing plus its seller. */
+export const gemDetailResponseSchema = z.object({
+  ok: z.literal(true),
+  gem: publicGemDetailSchema,
+});
+export type GemDetailResponse = z.infer<typeof gemDetailResponseSchema>;
 
 /** GET /gems */
 export const gemListResponseSchema = listResponseSchema(publicGemSchema);

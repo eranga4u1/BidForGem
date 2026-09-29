@@ -1,14 +1,15 @@
+import { formatMoney as formatMinorUnits } from "@gem/contracts";
+
 /** A monetary amount in minor units (cents) plus its ISO currency code. */
 export interface Money {
   amount: number;
   currency: string;
 }
 
-/** Format `Money` for display, e.g. { amount: 420000, currency: "USD" } -> "US$4,200.00". */
+/**
+ * Format `Money` for display using the shared formatter web and mobile also
+ * use, e.g. { amount: 150000, currency: "LKR" } -> "Rs. 1,500".
+ */
 export function formatMoney({ amount, currency }: Money): string {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount / 100);
-  } catch {
-    return `${currency} ${(amount / 100).toFixed(2)}`;
-  }
+  return formatMinorUnits(amount, currency);
 }

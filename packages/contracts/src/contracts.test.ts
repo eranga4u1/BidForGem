@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { authSessionResponseSchema, registerInputSchema, publicUserSchema } from "./auth.js";
-import { publicGemSchema, uploadTicketSchema, requestUploadInputSchema } from "./gems.js";
+import {
+  authSessionResponseSchema,
+  phoneSchema,
+  registerInputSchema,
+  publicUserSchema,
+  updateProfileInputSchema,
+} from "./auth.js";
+import {
+  publicGemDetailSchema,
+  publicGemSchema,
+  uploadTicketSchema,
+  requestUploadInputSchema,
+} from "./gems.js";
 import { publicMediaSchema } from "./gems.js";
 import { publicAuctionSchema, bidHistoryItemSchema, createAuctionInputSchema } from "./auctions.js";
 import { publicNotificationSchema } from "./notifications.js";
@@ -192,5 +203,87 @@ describe("contracts reject known-bad payloads", () => {
       sizeBytes: 0,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("seller contact numbers", () => {
+  const gemFixture = {
+    id: UUID,
+    sellerId: UUID,
+    title: "Blue Sapphire",
+    description: null,
+    type: "sapphire",
+    caratMilli: 2500,
+    carat: 2.5,
+    color: null,
+    clarity: null,
+    cut: null,
+    origin: null,
+    status: "active",
+    createdAt: ISO,
+    media: [],
+  };
+
+  it("accepts local and international phone formats", () => {
+    for (const p of ["0771234567", "077 123 4567", "+94 77 123 4567", "011-2345678"]) {
+      expect(phoneSchema.safeParse(p).success).toBe(true);
+    }
+  });
+
+  it("rejects letters and implausible lengths", () => {
+    for (const p of ["call me", "12345", "07712x4567", "+94 77 123 4567 8901 23"]) {
+      expect(phoneSchema.safeParse(p).success).toBe(false);
+    }
+  });
+
+  it("treats a blank number as none, and an omitted one as unchanged", () => {
+    const reg = registerInputSchema.parse({
+      name: "Ada",
+      email: "ada@example.com",
+      password: "Sapphire!Blue-42xz",
+      phone: "",
+    });
+    expect(reg.phone).toBeNull();
+
+    const cleared = updateProfileInputSchema.parse({
+      name: "Ada",
+      phone: "  ",
+      phone2: "0771234567",
+    });
+    expect(cleared.phone).toBeNull();
+    expect(cleared.phone2).toBe("0771234567");
+    expect(updateProfileInputSchema.safeParse({ name: "Ada", phone: "077 1" }).success).toBe(false);
+
+    const unchanged = updateProfileInputSchema.parse({ name: "Ada" });
+    expect(unchanged.phone).toBeUndefined();
+    expect(unchanged.phone2).toBeUndefined();
+  });
+
+  it("carries the seller on a listing detail, with numbers hidden (null) or shown", () => {
+    const hidden = publicGemDetailSchema.parse({
+      ...gemFixture,
+      seller: { name: "Sam", phones: null },
+    });
+    expect(hidden.seller).toEqual({ name: "Sam", phones: null });
+
+    const shown = publicGemDetailSchema.parse({
+      ...gemFixture,
+      seller: { name: "Sam", phones: ["077 123 4567"] },
+    });
+    expect(shown.seller?.phones).toEqual(["077 123 4567"]);
+  });
+
+  it("tolerates responses from an older API (client deployed first)", () => {
+    const user = publicUserSchema.parse({
+      id: UUID,
+      name: "Ada",
+      email: "ada@example.com",
+      role: "user",
+      verified: true,
+      createdAt: ISO,
+    });
+    expect(user.phone).toBeNull();
+    expect(user.phone2).toBeNull();
+    expect(publicGemDetailSchema.parse(gemFixture).seller).toBeNull();
   });
 });

@@ -10,9 +10,10 @@ interface AuthContextValue {
   user: PublicUser | null;
   status: Status;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateName: (name: string) => Promise<void>;
+  /** Save name + contact numbers ("" clears a number). */
+  updateProfile: (input: { name: string; phone: string; phone2: string }) => Promise<void>;
   refreshUser: () => Promise<void>;
   deleteAccount: (password: string) => Promise<void>;
 }
@@ -51,8 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   const register = useCallback(
-    async (name: string, email: string, password: string): Promise<void> => {
-      const { user: u } = await api.auth.register({ name, email, password });
+    async (name: string, email: string, password: string, phone?: string): Promise<void> => {
+      const { user: u } = await api.auth.register({ name, email, password, phone: phone ?? null });
       setUser(u);
       setStatus("authenticated");
     },
@@ -71,10 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setStatus("anonymous");
   }, []);
 
-  const updateName = useCallback(async (name: string): Promise<void> => {
-    const u = await api.auth.updateMe(name);
-    setUser(u);
-  }, []);
+  const updateProfile = useCallback(
+    async (input: { name: string; phone: string; phone2: string }): Promise<void> => {
+      const u = await api.auth.updateMe({
+        name: input.name,
+        phone: input.phone || null,
+        phone2: input.phone2 || null,
+      });
+      setUser(u);
+    },
+    [],
+  );
 
   const refreshUser = useCallback(async (): Promise<void> => {
     try {
@@ -91,8 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, register, logout, updateName, refreshUser, deleteAccount }),
-    [user, status, login, register, logout, updateName, refreshUser, deleteAccount],
+    () => ({ user, status, login, register, logout, updateProfile, refreshUser, deleteAccount }),
+    [user, status, login, register, logout, updateProfile, refreshUser, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicGem } from "@gem/contracts";
+import type { GemSeller, PublicGemDetail } from "@gem/contracts";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -15,7 +15,7 @@ export default function GemDetailPage(): React.ReactElement {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const { user } = useAuth();
-  const [gem, setGem] = useState<PublicGem | null>(null);
+  const [gem, setGem] = useState<PublicGemDetail | null>(null);
   const [auctionView, setAuctionView] = useState<GemAuctionView>({ kind: "none" });
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
@@ -82,6 +82,8 @@ export default function GemDetailPage(): React.ReactElement {
 
           <AuctionAffordance view={auctionView} isOwner={owner} />
 
+          {gem.seller ? <SellerCard seller={gem.seller} gemId={gem.id} /> : null}
+
           <div className="card card-tight">
             <div className="stack" style={{ gap: 9 }}>
               {rows.map(([k, v]) => (
@@ -98,6 +100,40 @@ export default function GemDetailPage(): React.ReactElement {
             </Link>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Who's selling, and how to reach them. The API only discloses contact numbers
+ * to signed-in viewers (`phones` is null otherwise), so anonymous visitors get
+ * a sign-in prompt instead.
+ */
+function SellerCard({ seller, gemId }: { seller: GemSeller; gemId: string }): React.ReactElement {
+  return (
+    <div className="card card-tight">
+      <div className="row between">
+        <span className="muted">Seller</span>
+        <strong>{seller.name}</strong>
+      </div>
+      <div className="row between" style={{ marginTop: 8, alignItems: "flex-start" }}>
+        <span className="muted">Contact</span>
+        {seller.phones === null ? (
+          <Link href={`/login?next=/gems/${gemId}`} style={{ color: "var(--brand-2)" }}>
+            Sign in to see contact numbers
+          </Link>
+        ) : seller.phones.length === 0 ? (
+          <span className="faint">No contact number provided</span>
+        ) : (
+          <span className="stack" style={{ gap: 4, alignItems: "flex-end" }}>
+            {seller.phones.map((p) => (
+              <a key={p} href={`tel:${p.replace(/[\s-]/g, "")}`} className="mono">
+                {p}
+              </a>
+            ))}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -149,6 +149,7 @@ export function createAuthService<T extends PgQueryResultHKT>(
       if (!parsed.success)
         return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
       const { name, email, password } = parsed.data;
+      const phone = parsed.data.phone ?? null;
 
       if (!allowed(`register:ip:${ctx.ip ?? "unknown"}`, LIMITS.registerPerIp)) {
         return { ok: false, reason: "RATE_LIMITED" };
@@ -160,7 +161,10 @@ export function createAuthService<T extends PgQueryResultHKT>(
 
       try {
         return await db.transaction(async (tx) => {
-          const [row] = await tx.insert(users).values({ name, email, passwordHash }).returning();
+          const [row] = await tx
+            .insert(users)
+            .values({ name, email, passwordHash, phone })
+            .returning();
           if (!row) throw new Error("User insert returned no row");
           const tokens = await issueTokens(tx, row.id, row.role, ctx);
           return { ok: true, user: toPublicUser(row), tokens };
@@ -273,11 +277,13 @@ export function createAuthService<T extends PgQueryResultHKT>(
       if (!parsed.success)
         return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
 
-      const [updated] = await db
-        .update(users)
-        .set({ name: parsed.data.name })
-        .where(eq(users.id, userId))
-        .returning();
+      // An omitted phone key keeps the stored number; null (or "") clears it.
+      const { name, phone, phone2 } = parsed.data;
+      const patch: Partial<typeof users.$inferInsert> = { name };
+      if (phone !== undefined) patch.phone = phone;
+      if (phone2 !== undefined) patch.phone2 = phone2;
+
+      const [updated] = await db.update(users).set(patch).where(eq(users.id, userId)).returning();
       if (!updated) return { ok: false, reason: "USER_NOT_FOUND" };
       return { ok: true, user: toPublicUser(updated) };
     },

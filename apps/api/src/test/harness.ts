@@ -29,6 +29,8 @@ export async function insertUser(db: AnyDb, overrides: Partial<User> = {}): Prom
       name: overrides.name ?? `User ${n}`,
       email: overrides.email ?? `user${n}@example.test`,
       passwordHash: overrides.passwordHash ?? "x",
+      // Sellers need a contact number to publish; pass `phone: null` to test that gate.
+      phone: overrides.phone !== undefined ? overrides.phone : "0771234567",
       ...overrides,
     })
     .returning();

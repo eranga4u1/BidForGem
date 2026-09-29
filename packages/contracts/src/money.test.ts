@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMoney, money } from "./money.js";
+import { addMoney, DEFAULT_CURRENCY, formatMoney, money } from "./money.js";
 
 describe("money", () => {
   it("constructs from integer minor units", () => {
@@ -27,5 +27,25 @@ describe("money", () => {
 
   it("refuses to add across currencies", () => {
     expect(() => addMoney(money(100, "USD"), money(100, "EUR"))).toThrow(/mismatch/i);
+  });
+});
+
+describe("formatMoney", () => {
+  it("renders LKR as Rs. with no decimals for whole rupees", () => {
+    expect(formatMoney(150000, "LKR")).toBe("Rs. 1,500");
+    expect(formatMoney(150000000, "LKR")).toBe("Rs. 1,500,000");
+    expect(formatMoney(0, "LKR")).toBe("Rs. 0");
+  });
+
+  it("keeps two decimals when an LKR amount has cents", () => {
+    expect(formatMoney(150050, "LKR")).toBe("Rs. 1,500.50");
+  });
+
+  it("uses Intl for other currencies", () => {
+    expect(formatMoney(150000, "USD")).toBe("$1,500.00");
+  });
+
+  it("makes LKR the marketplace currency", () => {
+    expect(DEFAULT_CURRENCY).toBe("LKR");
   });
 });

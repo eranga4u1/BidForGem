@@ -1,13 +1,23 @@
 "use client";
 
+import { phoneSchema } from "@gem/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GemApiError, useAuth } from "@/lib/auth";
 
+/** Validate an optional phone field with the same rule the API enforces. */
+function phoneError(value: string): string | null {
+  if (!value.trim()) return null;
+  return phoneSchema.safeParse(value).success
+    ? null
+    : "Use a phone number like 077 123 4567 or +94 77 123 4567.";
+}
+
 export default function ProfilePage(): React.ReactElement {
-  const { user, status, updateName, logout, deleteAccount } = useAuth();
+  const { user, status, updateProfile, logout, deleteAccount } = useAuth();
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [form, setForm] = useState({ name: "", phone: "", phone2: "" });
+  const [saveMsg, setSaveMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [password, setPassword] = useState("");
@@ -34,6 +44,40 @@ export default function ProfilePage(): React.ReactElement {
     if (status === "anonymous") router.replace("/login");
   }, [status, router]);
 
+  // Prefill the form with the saved profile (and re-sync after each save).
+  useEffect(() => {
+    if (user) setForm({ name: user.name, phone: user.phone ?? "", phone2: user.phone2 ?? "" });
+  }, [user]);
+
+  async function onSave(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    setSaveMsg(null);
+    const invalid = phoneError(form.phone) ?? phoneError(form.phone2);
+    if (!form.name.trim() || invalid) {
+      setSaveMsg({ kind: "error", text: invalid ?? "Your name can’t be empty." });
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateProfile({
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        phone2: form.phone2.trim(),
+      });
+      setSaveMsg({ kind: "success", text: "Profile saved." });
+    } catch (err) {
+      setSaveMsg({
+        kind: "error",
+        text:
+          err instanceof GemApiError && err.code === "INVALID_INPUT"
+            ? "Please check your details and try again."
+            : "Couldn’t save your profile. Please try again.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (status !== "authenticated" || !user) {
     return <div className="center-page">Loading…</div>;
   }
@@ -52,35 +96,67 @@ export default function ProfilePage(): React.ReactElement {
             <span>{user.email}</span>
           </div>
           <div className="row between">
+            <span className="muted">Contact</span>
+            <span>
+              {[user.phone, user.phone2].filter(Boolean).join(" · ") || (
+                <span className="faint">Not set</span>
+              )}
+            </span>
+          </div>
+          <div className="row between">
             <span className="muted">Role</span>
             <span className="pill">{user.role}</span>
           </div>
         </dl>
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3>Change display name</h3>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!name.trim()) return;
-            setSaving(true);
-            void updateName(name.trim()).finally(() => {
-              setSaving(false);
-              setName("");
-            });
-          }}
-        >
-          <input placeholder={user.name} value={name} onChange={(e) => setName(e.target.value)} />
-          <button
-            className="btn btn-block"
-            style={{ marginTop: 12 }}
-            disabled={saving || !name.trim()}
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
-        </form>
-      </div>
+      <form className="card" style={{ marginTop: 16 }} onSubmit={(e) => void onSave(e)}>
+        <h3>Edit profile</h3>
+        <p className="hint">
+          Signed-in buyers see your name and contact numbers on your listings. You need at least one
+          number to publish a listing.
+        </p>
+        <div className="field">
+          <label htmlFor="profile-name">Display name</label>
+          <input
+            id="profile-name"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+        </div>
+        <div className="grid-2">
+          <div className="field">
+            <label htmlFor="profile-phone">Contact number</label>
+            <input
+              id="profile-phone"
+              type="tel"
+              inputMode="tel"
+              placeholder="077 123 4567"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="profile-phone2">Second number (optional)</label>
+            <input
+              id="profile-phone2"
+              type="tel"
+              inputMode="tel"
+              placeholder="WhatsApp or land line"
+              value={form.phone2}
+              onChange={(e) => setForm((f) => ({ ...f, phone2: e.target.value }))}
+            />
+          </div>
+        </div>
+        {saveMsg && (
+          <div className={saveMsg.kind} role={saveMsg.kind === "error" ? "alert" : "status"}>
+            {saveMsg.text}
+          </div>
+        )}
+        <button className="btn btn-block" style={{ marginTop: 12 }} disabled={saving}>
+          {saving ? "Saving…" : "Save profile"}
+        </button>
+      </form>
 
       <button
         className="btn btn-ghost btn-block"

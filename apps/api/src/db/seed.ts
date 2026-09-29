@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { DEFAULT_CURRENCY } from "@gem/contracts";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import pg from "pg";
 import { createPoolDatabase, type Schema } from "./client.js";
@@ -13,7 +14,7 @@ import { appSettings } from "./schema.js";
 export const DEFAULT_POSTING_FEE = {
   enabled: false,
   amount: 0,
-  currency: "USD",
+  currency: DEFAULT_CURRENCY,
   free_until: null,
   free_quota: 0,
 } as const;

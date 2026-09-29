@@ -1,7 +1,7 @@
-import type { BidHistoryItem, PublicAuction, PublicGem } from "@gem/contracts";
+import type { BidHistoryItem, GemSeller, PublicAuction, PublicGemDetail } from "@gem/contracts";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
 import { GemThumb } from "@/components/GemThumb";
 import { PulseDot } from "@/components/PulseDot";
@@ -20,7 +20,7 @@ export default function AuctionScreen(): React.ReactElement {
   const router = useRouter();
   const { user } = useAuth();
   const [auction, setAuction] = useState<PublicAuction | null>(null);
-  const [gem, setGem] = useState<PublicGem | null>(null);
+  const [gem, setGem] = useState<PublicGemDetail | null>(null);
   const [history, setHistory] = useState<BidHistoryItem[]>([]);
   const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
   const [connected, setConnected] = useState(false);
@@ -154,6 +154,10 @@ export default function AuctionScreen(): React.ReactElement {
         <StatusPill status={auction.status} />
       </View>
 
+      {gem.seller ? (
+        <SellerCard seller={gem.seller} onSignIn={() => router.push("/login")} />
+      ) : null}
+
       <View style={styles.card}>
         <View style={styles.statsRow}>
           <View style={{ flex: 1 }}>
@@ -213,7 +217,7 @@ export default function AuctionScreen(): React.ReactElement {
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              placeholder={(minNext / 100).toFixed(2)}
+              placeholder={(minNext / 100).toFixed(minNext % 100 === 0 ? 0 : 2)}
               placeholderTextColor={theme.faint}
             />
             {bidError && <Text style={styles.error}>{bidError}</Text>}
@@ -321,7 +325,50 @@ function bidErrorMessage(err: unknown, min: string): string {
   return "Could not place bid.";
 }
 
+/**
+ * Who's selling and how to reach them. The API discloses contact numbers only
+ * to signed-in viewers (`phones` is null otherwise). Tapping a number opens
+ * the phone dialer.
+ */
+function SellerCard({
+  seller,
+  onSignIn,
+}: {
+  seller: GemSeller;
+  onSignIn: () => void;
+}): React.ReactElement {
+  return (
+    <View style={[styles.card, styles.sellerCard]}>
+      <View style={styles.sellerRow}>
+        <Text style={styles.k}>Seller</Text>
+        <Text style={styles.sellerName}>{seller.name}</Text>
+      </View>
+      {seller.phones === null ? (
+        <Pressable onPress={onSignIn} hitSlop={8}>
+          <Text style={styles.phoneLink}>Sign in to see contact numbers</Text>
+        </Pressable>
+      ) : seller.phones.length === 0 ? (
+        <Text style={styles.faint}>No contact number provided</Text>
+      ) : (
+        seller.phones.map((p) => (
+          <Pressable
+            key={p}
+            onPress={() => void Linking.openURL(`tel:${p.replace(/[\s-]/g, "")}`)}
+            hitSlop={8}
+          >
+            <Text style={styles.phoneLink}>📞 {p}</Text>
+          </Pressable>
+        ))
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  sellerCard: { gap: space.sm },
+  sellerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  sellerName: { color: theme.text, fontSize: 15, fontWeight: "800" },
+  phoneLink: { color: theme.brand, fontSize: 15, fontWeight: "700" },
   screen: { flex: 1, backgroundColor: theme.bg },
   content: { padding: space.lg, gap: space.md, paddingBottom: 48 },
   hero: {

@@ -12,6 +12,7 @@ export default function RegisterScreen(): React.ReactElement {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -21,7 +22,7 @@ export default function RegisterScreen(): React.ReactElement {
     setEmailTaken(false);
     setBusy(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(name.trim(), email.trim(), password, phone.trim() || undefined);
       router.back();
     } catch (err) {
       if (err instanceof GemApiError && err.code === "EMAIL_IN_USE") {
@@ -64,6 +65,16 @@ export default function RegisterScreen(): React.ReactElement {
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="you@example.com"
+          placeholderTextColor={theme.faint}
+        />
+        <Text style={s.label}>Contact number (optional — needed to sell)</Text>
+        <TextInput
+          style={s.input}
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          placeholder="077 123 4567"
           placeholderTextColor={theme.faint}
         />
         <Text style={s.label}>Password</Text>

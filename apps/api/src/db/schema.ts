@@ -42,6 +42,10 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("user"),
   verified: boolean("verified").notNull().default(false),
+  // Contact numbers shown to signed-in viewers on the seller's listings.
+  // Optional at sign-up; required (at least one) before publishing a listing.
+  phone: text("phone"),
+  phone2: text("phone2"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

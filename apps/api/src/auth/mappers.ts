@@ -13,6 +13,8 @@ export function toPublicUser(row: User): PublicUser {
     email: row.email,
     role: row.role,
     verified: row.verified,
+    phone: row.phone,
+    phone2: row.phone2,
     createdAt: row.createdAt,
   };
 }

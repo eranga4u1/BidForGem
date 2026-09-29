@@ -19,7 +19,10 @@ export default function LoginPage(): React.ReactElement {
     setBusy(true);
     try {
       await login(email, password);
-      router.push("/gems");
+      // Return to where sign-in was requested (e.g. a listing's contact numbers).
+      // Only same-site paths — never "//host" — so this can't open-redirect.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(next?.startsWith("/") && !next.startsWith("//") ? next : "/gems");
     } catch (err) {
       setError(
         err instanceof GemApiError && err.code === "INVALID_CREDENTIALS"

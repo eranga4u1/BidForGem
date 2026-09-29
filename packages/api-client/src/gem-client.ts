@@ -3,6 +3,7 @@ import {
   authSessionResponseSchema,
   userResponseSchema,
   gemResponseSchema,
+  gemDetailResponseSchema,
   gemListResponseSchema,
   uploadTicketResponseSchema,
   mediaResponseSchema,
@@ -25,6 +26,7 @@ import {
   type PostingFeeUpdateInput,
   type PublicAuction,
   type PublicGem,
+  type PublicGemDetail,
   type PublicMedia,
   type PublicNotification,
   type PublicUser,
@@ -64,12 +66,16 @@ export interface GemApiClient {
   hasRefreshToken(): Promise<boolean>;
   auth: {
     register(
-      input: { name: string; email: string; password: string },
+      input: { name: string; email: string; password: string; phone?: string | null },
       opts?: RequestOptions,
     ): Promise<AuthSession>;
     login(input: { email: string; password: string }, opts?: RequestOptions): Promise<AuthSession>;
     me(opts?: RequestOptions): Promise<PublicUser>;
-    updateMe(name: string, opts?: RequestOptions): Promise<PublicUser>;
+    /** Update your profile. Omit a phone to keep it; send "" or null to clear it. */
+    updateMe(
+      input: { name: string; phone?: string | null; phone2?: string | null },
+      opts?: RequestOptions,
+    ): Promise<PublicUser>;
     logout(opts?: RequestOptions): Promise<void>;
     /** Permanently delete the account (requires the password); clears local session. */
     deleteAccount(password: string, opts?: RequestOptions): Promise<void>;
@@ -78,7 +84,8 @@ export interface GemApiClient {
   };
   gems: {
     list(filter?: Query, opts?: RequestOptions): Promise<Page<PublicGem>>;
-    get(id: string, opts?: RequestOptions): Promise<PublicGem>;
+    /** A single listing, including its seller (contact numbers only when signed in). */
+    get(id: string, opts?: RequestOptions): Promise<PublicGemDetail>;
     create(input: unknown, opts?: RequestOptions): Promise<PublicGem>;
     update(id: string, input: unknown, opts?: RequestOptions): Promise<PublicGem>;
     remove(id: string, opts?: RequestOptions): Promise<void>;
@@ -297,11 +304,11 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
           auth: "required",
           signal: opts?.signal,
         }).then((r) => r.user),
-      updateMe: (name, opts) =>
+      updateMe: (input, opts) =>
         request({
           method: "PATCH",
           path: "/auth/me",
-          body: { name },
+          body: input,
           schema: userResponseSchema,
           auth: "required",
           signal: opts?.signal,
@@ -363,7 +370,7 @@ export function createGemApiClient(options: GemApiClientOptions): GemApiClient {
       get: (id, opts) =>
         request({
           path: `/gems/${id}`,
-          schema: gemResponseSchema,
+          schema: gemDetailResponseSchema,
           auth: "optional",
           signal: opts?.signal,
         }).then((r) => r.gem),

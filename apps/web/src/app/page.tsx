@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicAuction, PublicGem } from "@gem/contracts";
+import { DEFAULT_CURRENCY, type PublicAuction, type PublicGem } from "@gem/contracts";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Countdown } from "@/components/Countdown";
@@ -45,7 +45,7 @@ export default function Home(): React.ReactElement {
   const liveCount = tiles.length;
   const totalBids = tiles.reduce((s, t) => s + t.auction.bidCount, 0);
   const topBid = tiles.reduce((m, t) => Math.max(m, t.auction.highestBid ?? 0), 0);
-  const currency = tiles[0]?.auction.currency ?? "USD";
+  const currency = tiles[0]?.auction.currency ?? DEFAULT_CURRENCY;
 
   return (
     <>

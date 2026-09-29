@@ -15,6 +15,7 @@ export default function RegisterPage(): React.ReactElement {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -23,7 +24,7 @@ export default function RegisterPage(): React.ReactElement {
     setError(null);
     setBusy(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, phone.trim() || undefined);
       router.push("/gems");
     } catch (err) {
       if (
@@ -72,6 +73,21 @@ export default function RegisterPage(): React.ReactElement {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+          </div>
+          <div className="field">
+            <label htmlFor="phone">Contact number (optional)</label>
+            <input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="077 123 4567"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <div className="hint">
+              Shown to signed-in buyers on your listings — you’ll need one to sell.
+            </div>
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>

@@ -1,6 +1,6 @@
 "use client";
 
-import type { MediaType, PostingFee, PublicGem } from "@gem/contracts";
+import { DEFAULT_CURRENCY, type MediaType, type PostingFee, type PublicGem } from "@gem/contracts";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -12,6 +12,7 @@ import { uploadToStorage } from "@/lib/upload";
 type PublishState =
   | { kind: "idle" }
   | { kind: "blocked"; fee: PostingFee; ref: string }
+  | { kind: "needsContact" }
   | { kind: "error"; message: string };
 
 export default function EditGemPage(): React.ReactElement {
@@ -345,6 +346,8 @@ function PublishSection({
       if (err instanceof GemApiError && err.code === "POSTING_FEE_REQUIRED") {
         const d = err.details as { fee: PostingFee; paymentIntentRef: string };
         setState({ kind: "blocked", fee: d.fee, ref: d.paymentIntentRef });
+      } else if (err instanceof GemApiError && err.code === "CONTACT_REQUIRED") {
+        setState({ kind: "needsContact" });
       } else {
         setState({ kind: "error", message: "Could not publish. Please try again." });
       }
@@ -367,6 +370,18 @@ function PublishSection({
           </div>
           <div className="faint" style={{ marginTop: 6, fontSize: "0.78rem" }}>
             Payment intent: <span className="mono">{state.ref}</span>
+          </div>
+        </div>
+      ) : state.kind === "needsContact" ? (
+        <div className="notice" style={{ marginTop: 10 }} role="alert">
+          <strong>Add a contact number first</strong>
+          <div style={{ marginTop: 6 }}>
+            Buyers reach you from your listing, so you need at least one contact number before
+            publishing.{" "}
+            <Link href="/profile" style={{ color: "inherit", textDecoration: "underline" }}>
+              Add it on your profile
+            </Link>
+            , then come back and publish.
           </div>
         </div>
       ) : state.kind === "error" ? (
@@ -404,9 +419,9 @@ function StartAuctionSection({ gem }: { gem: PublicGem }): React.ReactElement {
   const [f, setF] = useState({
     startPrice: "",
     reserve: "",
-    minIncrement: "5",
+    minIncrement: "1000",
     durationSeconds: "86400",
-    currency: "USD",
+    currency: DEFAULT_CURRENCY,
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -445,7 +460,9 @@ function StartAuctionSection({ gem }: { gem: PublicGem }): React.ReactElement {
   return (
     <form className="card" onSubmit={(e) => void start(e)}>
       <h3>Start an auction</h3>
-      <p className="hint">Prices are in {f.currency}. The server drives the countdown and close.</p>
+      <p className="hint">
+        Prices are in Sri Lankan rupees (Rs.). The server drives the countdown and close.
+      </p>
       <div className="grid-2">
         <div className="field">
           <label>Start price</label>
@@ -453,7 +470,7 @@ function StartAuctionSection({ gem }: { gem: PublicGem }): React.ReactElement {
             value={f.startPrice}
             onChange={set("startPrice")}
             inputMode="decimal"
-            placeholder="500"
+            placeholder="50000"
             required
           />
         </div>
@@ -463,7 +480,7 @@ function StartAuctionSection({ gem }: { gem: PublicGem }): React.ReactElement {
             value={f.reserve}
             onChange={set("reserve")}
             inputMode="decimal"
-            placeholder="800"
+            placeholder="80000"
           />
         </div>
       </div>

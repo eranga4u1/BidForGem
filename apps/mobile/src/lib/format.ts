@@ -1,12 +1,5 @@
-/** Format integer minor units (cents) as a currency string. */
-export function formatMoney(cents: number, currency: string): string {
-  const amount = cents / 100;
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
-  } catch {
-    return `${currency} ${amount.toFixed(2)}`;
-  }
-}
+/** Format integer minor units as a currency string ("Rs. 1,500") — shared with web + email. */
+export { formatMoney } from "@gem/contracts";
 
 /** ms remaining -> compact "3d" / "5h" / "12m" / "45s" for at-a-glance urgency. */
 export function formatEndsIn(ms: number): string {

@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY } from "@gem/contracts";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -5,6 +6,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { api, GemApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { uploadGemPhoto, type PickedPhoto } from "@/lib/upload";
 import { radius, space, theme } from "@/lib/theme";
 
@@ -17,6 +19,8 @@ const DURATIONS = [
 
 export default function SellScreen(): React.ReactElement {
   const router = useRouter();
+  const { user } = useAuth();
+  const [needsContact, setNeedsContact] = useState(false);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [title, setTitle] = useState("");
   const [type, setType] = useState("");
@@ -27,7 +31,7 @@ export default function SellScreen(): React.ReactElement {
   const [origin, setOrigin] = useState("");
   const [description, setDescription] = useState("");
   const [startPrice, setStartPrice] = useState("");
-  const [minIncrement, setMinIncrement] = useState("");
+  const [minIncrement, setMinIncrement] = useState("1000");
   const [reserve, setReserve] = useState("");
   const [durationSeconds, setDurationSeconds] = useState(86400);
   const [busy, setBusy] = useState(false);
@@ -70,7 +74,16 @@ export default function SellScreen(): React.ReactElement {
       setError("Enter a valid start price and minimum increment.");
       return;
     }
+    // Check BEFORE creating anything: publishing requires a contact number, and
+    // failing after the draft + photo uploads would strand an orphan draft that
+    // a retry then duplicates. (The server still enforces the rule.)
+    if (!user?.phone && !user?.phone2) {
+      setNeedsContact(true);
+      setError("Add a contact number to your profile first — buyers reach you from your listing.");
+      return;
+    }
 
+    setNeedsContact(false);
     setError(null);
     setBusy(true);
     try {
@@ -99,13 +112,14 @@ export default function SellScreen(): React.ReactElement {
         gemId: gem.id,
         startPrice: startCents,
         minIncrement: incCents,
-        currency: "USD",
+        currency: DEFAULT_CURRENCY,
         durationSeconds,
         ...(reserveCents !== undefined ? { reservePrice: reserveCents } : {}),
       });
 
       router.replace(`/auctions/${auction.id}`);
     } catch (err) {
+      if (err instanceof GemApiError && err.code === "CONTACT_REQUIRED") setNeedsContact(true);
       setError(
         err instanceof GemApiError ? err.message : "Couldn’t create the listing. Please try again.",
       );
@@ -192,10 +206,10 @@ export default function SellScreen(): React.ReactElement {
       <Text style={styles.section}>Auction</Text>
       <View style={styles.row}>
         <Field
-          label="Start price (USD)"
+          label="Start price (Rs.)"
           value={startPrice}
           onChangeText={setStartPrice}
-          placeholder="1000"
+          placeholder="50000"
           keyboardType="decimal-pad"
           flex
         />
@@ -203,7 +217,7 @@ export default function SellScreen(): React.ReactElement {
           label="Min. increment"
           value={minIncrement}
           onChangeText={setMinIncrement}
-          placeholder="50"
+          placeholder="1000"
           keyboardType="decimal-pad"
           flex
         />
@@ -233,6 +247,11 @@ export default function SellScreen(): React.ReactElement {
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {needsContact ? (
+        <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
+          <Text style={styles.link}>Add a contact number on your profile →</Text>
+        </Pressable>
+      ) : null}
 
       <Pressable
         style={({ pressed }) => [
@@ -357,6 +376,7 @@ const styles = StyleSheet.create({
   chipText: { color: theme.text, fontWeight: "700", fontSize: 13 },
   chipTextActive: { color: theme.ink },
   error: { color: theme.danger, marginTop: space.md, fontSize: 14 },
+  link: { color: theme.brand, marginTop: space.sm, fontSize: 14, fontWeight: "700" },
   btn: {
     backgroundColor: theme.brand,
     borderRadius: radius.md,

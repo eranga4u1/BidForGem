@@ -8,9 +8,11 @@ interface AuthContextValue {
   user: PublicUser | null;
   status: Status;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: (password: string) => Promise<void>;
+  /** Save name + contact numbers ("" clears a number). */
+  updateProfile: (input: { name: string; phone: string; phone2: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,8 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   const register = useCallback(
-    async (name: string, email: string, password: string): Promise<void> => {
-      const { user: u } = await api.auth.register({ name, email, password });
+    async (name: string, email: string, password: string, phone?: string): Promise<void> => {
+      const { user: u } = await api.auth.register({ name, email, password, phone: phone ?? null });
       setUser(u);
       setStatus("authenticated");
     },
@@ -66,9 +68,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setStatus("anonymous");
   }, []);
 
+  const updateProfile = useCallback(
+    async (input: { name: string; phone: string; phone2: string }): Promise<void> => {
+      const u = await api.auth.updateMe({
+        name: input.name,
+        phone: input.phone || null,
+        phone2: input.phone2 || null,
+      });
+      setUser(u);
+    },
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, register, logout, deleteAccount }),
-    [user, status, login, register, logout, deleteAccount],
+    () => ({ user, status, login, register, logout, deleteAccount, updateProfile }),
+    [user, status, login, register, logout, deleteAccount, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

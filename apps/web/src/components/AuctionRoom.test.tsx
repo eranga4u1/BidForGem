@@ -73,6 +73,8 @@ const bidder: PublicUser = {
   email: "ada@example.com",
   role: "user",
   verified: false,
+  phone: null,
+  phone2: null,
   createdAt: new Date(),
 };
 

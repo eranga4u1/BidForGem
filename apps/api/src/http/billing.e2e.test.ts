@@ -19,9 +19,12 @@ afterAll(async () => {
 const http = () => request(api.app.getHttpServer());
 
 async function register(): Promise<{ token: string; id: string }> {
-  const res = await http()
-    .post("/auth/register")
-    .send({ name: "User", email: uniqueEmail(), password: "Sapphire!Blue-42xz" });
+  const res = await http().post("/auth/register").send({
+    name: "User",
+    email: uniqueEmail(),
+    password: "Sapphire!Blue-42xz",
+    phone: "077 123 4567",
+  });
   expect(res.status).toBe(201);
   const body = res.body as { tokens: { accessToken: string }; user: { id: string } };
   return { token: body.tokens.accessToken, id: body.user.id };
@@ -58,7 +61,7 @@ describe("posting-fee gate e2e", () => {
     const res = await http()
       .patch("/admin/settings/posting_fee")
       .set("authorization", `Bearer ${seller.token}`)
-      .send({ enabled: true, amount: 500, currency: "USD", free_until: null, free_quota: 0 });
+      .send({ enabled: true, amount: 500, currency: "LKR", free_until: null, free_quota: 0 });
     expect(res.status).toBe(403);
   });
 
@@ -73,7 +76,7 @@ describe("posting-fee gate e2e", () => {
     const patch = await http()
       .patch("/admin/settings/posting_fee")
       .set("authorization", `Bearer ${admin.token}`)
-      .send({ enabled: true, amount: 500, currency: "USD", free_until: null, free_quota: 0 });
+      .send({ enabled: true, amount: 500, currency: "LKR", free_until: null, free_quota: 0 });
     expect(patch.status).toBe(200);
 
     // Same publish flow, no code change -> 402 Payment Required with the fee.
@@ -86,7 +89,7 @@ describe("posting-fee gate e2e", () => {
       };
     };
     expect(body.error.code).toBe("POSTING_FEE_REQUIRED");
-    expect(body.error.details.fee).toEqual({ required: true, amount: 500, currency: "USD" });
+    expect(body.error.details.fee).toEqual({ required: true, amount: 500, currency: "LKR" });
     expect(body.error.details.paymentIntentRef).toMatch(/^pf_/);
   });
 });
