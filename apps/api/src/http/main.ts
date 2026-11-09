@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { IoAdapter } from "@nestjs/platform-socket.io";
 import pg from "pg";
 import { createPoolDatabase } from "../db/client.js";
@@ -38,7 +39,14 @@ async function bootstrap(): Promise<void> {
     await migrationPool.end();
   }
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Behind Render's proxy the socket peer is the proxy, so without this every
+  // user shares ONE req.ip — and one per-IP rate-limit bucket for login,
+  // refresh and bids (a few busy minutes locks everyone out). Take the client
+  // IP from X-Forwarded-For instead. TRUST_PROXY accepts Express values:
+  // "true" (default), "false", or a hop count like "2".
+  const trustProxy = process.env.TRUST_PROXY ?? "true";
+  app.set("trust proxy", /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy !== "false");
   // Explicit Socket.IO adapter so the /auctions gateway works in production.
   app.useWebSocketAdapter(new IoAdapter(app));
 

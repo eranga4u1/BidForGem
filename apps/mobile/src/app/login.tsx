@@ -24,7 +24,9 @@ export default function LoginScreen(): React.ReactElement {
       setError(
         err instanceof GemApiError && err.code === "INVALID_CREDENTIALS"
           ? "Incorrect email or password."
-          : "Couldn’t sign in. Please try again.",
+          : err instanceof GemApiError && err.code === "RATE_LIMITED"
+            ? "Too many sign-in attempts. Please wait 15 minutes and try again."
+            : "Couldn’t sign in. Please try again.",
       );
     } finally {
       setBusy(false);

@@ -204,6 +204,11 @@ export function createAuthService<T extends PgQueryResultHKT>(
       const valid = await verifyPassword(user.passwordHash, password);
       if (!valid) return { ok: false, reason: "INVALID_CREDENTIALS" };
 
+      // The per-email budget guards against password guessing, so only failed
+      // attempts should spend it — signing in on web and phone mustn't lock the
+      // account out.
+      rateLimiter?.reset?.(`login:email:${email}`);
+
       const tokens = await db.transaction((tx) => issueTokens(tx, user.id, user.role, ctx));
       return { ok: true, user: toPublicUser(user), tokens };
     },

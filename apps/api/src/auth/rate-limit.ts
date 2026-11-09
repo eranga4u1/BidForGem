@@ -7,6 +7,8 @@
 export interface RateLimiter {
   /** Record a hit for `key`. Returns true if allowed, false if over the limit. */
   hit(key: string, limit: number, windowMs: number): boolean;
+  /** Forget all hits for `key` (e.g. after a successful login). Optional. */
+  reset?(key: string): void;
 }
 
 export function createInMemoryRateLimiter(now: () => number = Date.now): RateLimiter {
@@ -24,6 +26,9 @@ export function createInMemoryRateLimiter(now: () => number = Date.now): RateLim
       recent.push(current);
       hits.set(key, recent);
       return true;
+    },
+    reset(key) {
+      hits.delete(key);
     },
   };
 }

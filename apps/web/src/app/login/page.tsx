@@ -27,7 +27,9 @@ export default function LoginPage(): React.ReactElement {
       setError(
         err instanceof GemApiError && err.code === "INVALID_CREDENTIALS"
           ? "Incorrect email or password."
-          : "Something went wrong. Please try again.",
+          : err instanceof GemApiError && err.code === "RATE_LIMITED"
+            ? "Too many sign-in attempts. Please wait 15 minutes and try again."
+            : "Something went wrong. Please try again.",
       );
     } finally {
       setBusy(false);

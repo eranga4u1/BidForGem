@@ -225,6 +225,22 @@ describe("AuthService", () => {
       );
       expect(attempts[5]).toEqual({ ok: false, reason: "RATE_LIMITED" });
     });
+
+    it("does not spend the per-email budget on successful logins", async () => {
+      const limiter = createInMemoryRateLimiter();
+      const limited = createAuthService({ db, config, rateLimiter: limiter });
+      await limited.register({ name: "OK", email: "ok-rl@example.com", password: VALID_PASSWORD });
+
+      // e.g. signing in on the web and the phone repeatedly, with a typo or two.
+      for (let i = 0; i < 8; i++) {
+        await limited.login({ email: "ok-rl@example.com", password: "Wrong!Password-99" }, {});
+        const res = await limited.login(
+          { email: "ok-rl@example.com", password: VALID_PASSWORD },
+          {},
+        );
+        expect(res.ok).toBe(true);
+      }
+    });
   });
 
   describe("deleteAccount", () => {
