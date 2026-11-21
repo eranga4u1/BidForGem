@@ -1,8 +1,9 @@
 import { phoneSchema } from "@gem/contracts";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { GemApiError, useAuth } from "@/lib/auth";
+import { PRIVACY_POLICY_URL } from "@/lib/config";
 import { radius, space, theme } from "@/lib/theme";
 
 /** Same rule the API enforces; blank is allowed (the field is optional). */
@@ -132,6 +133,11 @@ export default function ProfileScreen(): React.ReactElement {
       >
         <Text style={styles.secondaryText}>My bids</Text>
       </Pressable>
+      <Link href={PRIVACY_POLICY_URL} asChild>
+        <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}>
+          <Text style={styles.secondaryText}>Privacy Policy</Text>
+        </Pressable>
+      </Link>
 
       <Pressable
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
@@ -144,8 +150,8 @@ export default function ProfileScreen(): React.ReactElement {
       <View style={styles.dangerCard}>
         <Text style={styles.dangerTitle}>Delete account</Text>
         <Text style={styles.dangerBody}>
-          This permanently removes your personal data and signs you out everywhere. Your past bids
-          stay on record as “Deleted user”. This can’t be undone.
+          This removes your account contact details and disables sign-in. Published listings and
+          past bids can remain under “Deleted user”. This can’t be undone.
         </Text>
 
         {!confirming ? (

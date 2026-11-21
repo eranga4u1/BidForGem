@@ -1,9 +1,10 @@
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { GemApiError, useAuth } from "@/lib/auth";
 import { authStyles as s } from "@/lib/auth-styles";
+import { PRIVACY_POLICY_URL } from "@/lib/config";
 import { theme } from "@/lib/theme";
 
 export default function RegisterScreen(): React.ReactElement {
@@ -77,6 +78,9 @@ export default function RegisterScreen(): React.ReactElement {
           placeholder="077 123 4567"
           placeholderTextColor={theme.faint}
         />
+        <Text style={s.label}>
+          Signed-in buyers can see your number on your published listings.
+        </Text>
         <Text style={s.label}>Password</Text>
         <TextInput
           style={s.input}
@@ -99,6 +103,9 @@ export default function RegisterScreen(): React.ReactElement {
         >
           <Text style={s.btnText}>{busy ? "Creating…" : "Create account"}</Text>
         </Pressable>
+        <Link href={PRIVACY_POLICY_URL} style={s.link}>
+          Privacy Policy
+        </Link>
         <Pressable onPress={() => router.replace("/login")}>
           <Text style={s.link}>Already have an account? Sign in</Text>
         </Pressable>

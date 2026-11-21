@@ -5,3 +5,4 @@
  */
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://bidforgem.onrender.com";
 export const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? API_URL;
+export const PRIVACY_POLICY_URL = "https://bidforgem.com/privacy";

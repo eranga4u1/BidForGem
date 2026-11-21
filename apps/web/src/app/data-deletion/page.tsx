@@ -15,8 +15,7 @@ export default function DataDeletionPage(): React.ReactElement {
         </p>
 
         <p style={{ marginTop: 16 }}>
-          You can permanently delete your BidForGem account and personal data at any time. There are
-          two ways to do it.
+          You can permanently delete your BidForGem account at any time using either method below.
         </p>
 
         <h3 style={{ marginTop: 20 }}>In the app</h3>
@@ -44,15 +43,16 @@ export default function DataDeletionPage(): React.ReactElement {
 
         <h3 style={{ marginTop: 20 }}>What is deleted</h3>
         <ul className="muted" style={{ lineHeight: 1.7 }}>
-          <li>Your personal information — name and email address — is removed.</li>
-          <li>Sign-in is permanently disabled and all active sessions are revoked.</li>
+          <li>Your account name, email address, and contact numbers are removed.</li>
+          <li>Sign-in is permanently disabled and your sign-in sessions are revoked.</li>
         </ul>
 
         <h3 style={{ marginTop: 20 }}>What is retained</h3>
         <p className="muted">
-          To keep past auctions and other bidders’ records accurate, bids you placed are kept in
-          anonymized form and shown as “Deleted user”. This retained data is no longer linked to
-          your personal information. Deletion is immediate and cannot be undone.
+          Published listings, photos, and bid history may remain to preserve auction records.
+          Retained records display your account as “Deleted user”. If a listing or photo contains
+          personal information you want removed, contact us using the email below. Account deletion
+          cannot be undone.
         </p>
 
         <h3 style={{ marginTop: 20 }}>Contact</h3>

@@ -11,7 +11,7 @@ export default function PrivacyPage(): React.ReactElement {
       <div className="card">
         <h1>Privacy Policy</h1>
         <p className="muted" style={{ marginTop: 4 }}>
-          Last updated: September 2026
+          Last updated: November 2026
         </p>
 
         <p style={{ marginTop: 16 }}>
@@ -22,8 +22,9 @@ export default function PrivacyPage(): React.ReactElement {
         <h3 style={{ marginTop: 20 }}>Information we collect</h3>
         <ul className="muted" style={{ lineHeight: 1.7 }}>
           <li>
-            <strong>Account information:</strong> your name, email address, and a securely hashed
-            password.
+            <strong>Account information:</strong> your name, email address, optional contact phone
+            numbers, and a securely hashed password. A contact number is required to publish a
+            listing.
           </li>
           <li>
             <strong>Content you provide:</strong> gem listings you create, photos you upload, and
@@ -50,17 +51,19 @@ export default function PrivacyPage(): React.ReactElement {
 
         <h3 style={{ marginTop: 20 }}>Sharing</h3>
         <p className="muted">
-          We do not sell your personal information. We share data only with service providers who
-          help us run the app — cloud hosting, object storage for images, and email delivery — and
-          only as needed to provide the service.
+          Published listings and their photos are visible to visitors. Signed-in users can see the
+          contact numbers you add to your seller profile when viewing your listing. We use service
+          providers for hosting, image storage, and email delivery. We do not sell your personal
+          information.
         </p>
 
         <h3 style={{ marginTop: 20 }}>Data retention and deletion</h3>
         <p className="muted">
           You can permanently delete your account at any time from your profile in the app, or by
-          contacting us at the address below. When you delete your account, we remove your personal
-          information (name, email) and disable sign-in. Records required for marketplace integrity,
-          such as past bids, are retained in anonymized form and shown as “Deleted user”. See our{" "}
+          contacting us at the address below. When you delete your account, we remove your name,
+          email address, and contact numbers, and disable sign-in. Published listings, photos, and
+          bid history may remain to preserve auction records. Your account is displayed as “Deleted
+          user” on retained records. See our{" "}
           <a href="/data-deletion">account &amp; data deletion</a> page for details.
         </p>
 
