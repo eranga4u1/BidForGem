@@ -195,7 +195,7 @@ export function createAuthService<T extends PgQueryResultHKT>(
 
       const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-      if (!user) {
+      if (!user || user.deletedAt) {
         // Equalize timing with the found path — verify against a dummy hash.
         await verifyPassword(await getDummyHash(config.argon2), password);
         return { ok: false, reason: "INVALID_CREDENTIALS" };
@@ -258,7 +258,7 @@ export function createAuthService<T extends PgQueryResultHKT>(
           .where(eq(refreshTokens.id, existing.id));
 
         const [user] = await tx.select().from(users).where(eq(users.id, existing.userId)).limit(1);
-        if (!user) return { ok: false, reason: "INVALID_TOKEN" };
+        if (!user || user.deletedAt) return { ok: false, reason: "INVALID_TOKEN" };
 
         const tokens = await issueTokens(tx, user.id, user.role, ctx);
         return { ok: true, user: toPublicUser(user), tokens };
@@ -288,7 +288,11 @@ export function createAuthService<T extends PgQueryResultHKT>(
       if (phone !== undefined) patch.phone = phone;
       if (phone2 !== undefined) patch.phone2 = phone2;
 
-      const [updated] = await db.update(users).set(patch).where(eq(users.id, userId)).returning();
+      const [updated] = await db
+        .update(users)
+        .set(patch)
+        .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+        .returning();
       if (!updated) return { ok: false, reason: "USER_NOT_FOUND" };
       return { ok: true, user: toPublicUser(updated) };
     },
@@ -299,7 +303,7 @@ export function createAuthService<T extends PgQueryResultHKT>(
         return { ok: false, reason: "INVALID_INPUT", issues: parsed.error.issues };
 
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      if (!user) return { ok: false, reason: "USER_NOT_FOUND" };
+      if (!user || user.deletedAt) return { ok: false, reason: "USER_NOT_FOUND" };
 
       // Re-authenticate: deleting an account is destructive and must not be
       // possible from a stolen access token alone.
@@ -321,6 +325,9 @@ export function createAuthService<T extends PgQueryResultHKT>(
             email: `deleted+${user.id}@deleted.invalid`,
             passwordHash: lockedHash,
             verified: false,
+            phone: null,
+            phone2: null,
+            deletedAt: now(),
           })
           .where(eq(users.id, userId));
         await tx
@@ -343,7 +350,7 @@ export function createAuthService<T extends PgQueryResultHKT>(
       // send is delegated (fire-and-forget at the wiring) so response timing
       // does not leak existence either.
       const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (user && deps.passwordResetMailer) {
+      if (user && !user.deletedAt && deps.passwordResetMailer) {
         const { token, tokenHash } = generateOpaqueToken();
         const expiresAt = new Date(now().getTime() + config.passwordResetTtlSeconds * 1000);
         await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });

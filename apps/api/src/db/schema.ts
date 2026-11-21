@@ -47,6 +47,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   phone2: text("phone2"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const gems = pgTable(

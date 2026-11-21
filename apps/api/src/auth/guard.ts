@@ -43,7 +43,7 @@ export async function authenticate<T extends PgQueryResultHKT>(
     .from(users)
     .where(eq(users.id, verified.claims.sub))
     .limit(1);
-  if (!user) return { ok: false, reason: "USER_NOT_FOUND" };
+  if (!user || user.deletedAt) return { ok: false, reason: "USER_NOT_FOUND" };
 
   return { ok: true, user: toPublicUser(user), claims: verified.claims };
 }

@@ -101,6 +101,37 @@ describe("seller contact numbers", () => {
     expect(JSON.stringify(list.body)).not.toContain("077 765 4321");
   });
 
+  it("removes both published contact numbers and rejects the deleted seller's access token", async () => {
+    const seller = await register("077 123 4567");
+    const authorization = `Bearer ${seller.token}`;
+    const saved = await http()
+      .patch("/auth/me")
+      .set("authorization", authorization)
+      .send({ name: "Sam Seller", phone2: "+94 11 234 5678" });
+    expect(saved.status).toBe(200);
+    const gemId = await draftGem(seller.token);
+    expect((await publish(seller.token, gemId)).status).toBe(201);
+    const buyer = await register();
+    const detail = () => http().get(`/gems/${gemId}`).set("authorization", `Bearer ${buyer.token}`);
+    const before = await detail();
+    expect((before.body as Detail).gem.seller.phones).toEqual(["077 123 4567", "+94 11 234 5678"]);
+
+    const deleted = await http()
+      .delete("/auth/me")
+      .set("authorization", authorization)
+      .send({ password: "Sapphire!Blue-42xz" });
+    expect(deleted.status).toBe(200);
+
+    const after = await detail();
+    expect(after.status).toBe(200);
+    expect((after.body as Detail).gem.seller).toEqual({ name: "Deleted user", phones: [] });
+    const edit = await http()
+      .patch("/auth/me")
+      .set("authorization", authorization)
+      .send({ name: "Sam Seller", phone: "077 123 4567" });
+    expect(edit.status).toBe(401);
+  });
+
   it("profile update: omitted numbers are kept, blank clears, invalid is rejected", async () => {
     const user = await register("077 111 2222");
     const me = (token: string) => http().get("/auth/me").set("authorization", `Bearer ${token}`);
