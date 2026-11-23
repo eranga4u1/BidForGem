@@ -2,7 +2,7 @@
   "expo": {
     "name": "BidForGem",
     "slug": "bidforgem",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bidforgem",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.bidforgem.app",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,7 +40,8 @@
         {
           "photosPermission": "Allow BidForGem to access your photos so you can add them to your gem listings."
         }
-      ]
+      ],
+      "./plugins/withOptionalPortraitFeature"
     ],
     "experiments": {
       "typedRoutes": true,
