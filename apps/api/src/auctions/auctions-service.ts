@@ -86,19 +86,6 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
   const countBids = (auctionId: string): Promise<number> =>
     db.$count(bids, eq(bids.auctionId, auctionId));
 
-  /**
-   * The server's own clock — the DB clock, the SAME source `closeAuction` trusts
-   * to decide when an auction is due. `now()` is constant per statement, so any
-   * present row works as a carrier; the gem we just validated guarantees one.
-   */
-  const databaseNow = async (gemId: string): Promise<Date> => {
-    const [row] = await db
-      .select({ now: sql<Date>`now()` })
-      .from(gems)
-      .where(eq(gems.id, gemId));
-    return row ? new Date(row.now) : new Date();
-  };
-
   return {
     async create(sellerId, rawInput) {
       const parsed = createAuctionInputSchema.safeParse(rawInput);
@@ -107,62 +94,70 @@ export function createAuctionsService(deps: AuctionsServiceDeps): AuctionsServic
       }
       const input = parsed.data;
 
-      const gem = await loadGem(db, input.gemId);
-      if (!gem || isDeleted(gem)) return { ok: false, reason: "GEM_NOT_FOUND" };
-      if (gem.sellerId !== sellerId) return { ok: false, reason: "NOT_GEM_OWNER" };
-      if (gem.status !== "active") return { ok: false, reason: "GEM_NOT_ACTIVE" };
+      return db.transaction(async (tx): Promise<CreateAuctionResult> => {
+        // Serialize starts for this listing, including reposts from separate devices.
+        const [gem] = await tx.select().from(gems).where(eq(gems.id, input.gemId)).for("update");
+        if (!gem || isDeleted(gem)) return { ok: false, reason: "GEM_NOT_FOUND" };
+        if (gem.sellerId !== sellerId) return { ok: false, reason: "NOT_GEM_OWNER" };
+        if (gem.status !== "active") return { ok: false, reason: "GEM_NOT_ACTIVE" };
 
-      const existing = await db
-        .select({ id: auctions.id })
-        .from(auctions)
-        .where(
-          and(eq(auctions.gemId, input.gemId), inArray(auctions.status, ["scheduled", "active"])),
-        )
-        .limit(1);
-      if (existing.length > 0) return { ok: false, reason: "AUCTION_ALREADY_EXISTS" };
+        const existing = await tx
+          .select({ id: auctions.id })
+          .from(auctions)
+          .where(
+            and(eq(auctions.gemId, input.gemId), inArray(auctions.status, ["scheduled", "active"])),
+          )
+          .limit(1);
+        if (existing.length > 0) return { ok: false, reason: "AUCTION_ALREADY_EXISTS" };
 
-      if (input.reservePrice !== undefined && input.reservePrice < input.startPrice) {
-        return { ok: false, reason: "RESERVE_BELOW_START" };
-      }
-
-      // SERVER-authoritative deadline: derive start_at and end_at from the DB
-      // clock, never from a client-supplied instant. `startAt` (if sent) is only
-      // a request the server validates as future; otherwise the auction starts
-      // now. end_at is always start_at + duration.
-      const dbNow = await databaseNow(input.gemId);
-      let startAt: Date;
-      if (input.startAt === undefined) {
-        startAt = dbNow;
-      } else {
-        if (input.startAt.getTime() <= dbNow.getTime()) {
-          return { ok: false, reason: "START_IN_PAST" };
+        if (input.reservePrice !== undefined && input.reservePrice < input.startPrice) {
+          return { ok: false, reason: "RESERVE_BELOW_START" };
         }
-        startAt = input.startAt;
-      }
-      const endAt = new Date(startAt.getTime() + input.durationSeconds * 1000);
-      const status = startAt.getTime() <= dbNow.getTime() ? "active" : "scheduled";
 
-      const [row] = await db
-        .insert(auctions)
-        .values({
-          gemId: input.gemId,
-          startPrice: input.startPrice,
-          reservePrice: input.reservePrice ?? null,
-          minIncrement: input.minIncrement,
-          currency: input.currency,
-          startAt,
-          endAt,
-          status,
-          ...(input.antiSnipeWindowSeconds !== undefined
-            ? { antiSnipeWindowSeconds: input.antiSnipeWindowSeconds }
-            : {}),
-          ...(input.antiSnipeExtendSeconds !== undefined
-            ? { antiSnipeExtendSeconds: input.antiSnipeExtendSeconds }
-            : {}),
-        })
-        .returning();
-      if (!row) throw new Error("Auction insert returned no row");
-      return { ok: true, auction: toPublicAuction(row, 0) };
+        // SERVER-authoritative deadline: derive start_at and end_at from the DB
+        // clock, never from a client-supplied instant. `startAt` (if sent) is only
+        // a request the server validates as future; otherwise the auction starts
+        // now. end_at is always start_at + duration.
+        const [clock] = await tx
+          .select({ now: sql<Date>`statement_timestamp()` })
+          .from(gems)
+          .where(eq(gems.id, gem.id));
+        if (!clock) throw new Error("Auction gem missing under lock");
+        const dbNow = new Date(clock.now);
+        let startAt: Date;
+        if (input.startAt === undefined) {
+          startAt = dbNow;
+        } else {
+          if (input.startAt.getTime() <= dbNow.getTime()) {
+            return { ok: false, reason: "START_IN_PAST" };
+          }
+          startAt = input.startAt;
+        }
+        const endAt = new Date(startAt.getTime() + input.durationSeconds * 1000);
+        const status = startAt.getTime() <= dbNow.getTime() ? "active" : "scheduled";
+
+        const [row] = await tx
+          .insert(auctions)
+          .values({
+            gemId: input.gemId,
+            startPrice: input.startPrice,
+            reservePrice: input.reservePrice ?? null,
+            minIncrement: input.minIncrement,
+            currency: input.currency,
+            startAt,
+            endAt,
+            status,
+            ...(input.antiSnipeWindowSeconds !== undefined
+              ? { antiSnipeWindowSeconds: input.antiSnipeWindowSeconds }
+              : {}),
+            ...(input.antiSnipeExtendSeconds !== undefined
+              ? { antiSnipeExtendSeconds: input.antiSnipeExtendSeconds }
+              : {}),
+          })
+          .returning();
+        if (!row) throw new Error("Auction insert returned no row");
+        return { ok: true, auction: toPublicAuction(row, 0) };
+      });
     },
 
     async get(auctionId) {

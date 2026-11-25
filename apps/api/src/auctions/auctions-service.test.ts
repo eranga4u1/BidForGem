@@ -5,6 +5,7 @@ import { placeBid } from "../bidding/place-bid.js";
 import { bids, users } from "../db/schema.js";
 import { insertAuction, insertGem, insertUser, makeTestDb, type AnyDb } from "../test/harness.js";
 import { createAuctionsService, type AuctionsService } from "./auctions-service.js";
+import { closeAuction } from "./close-auction.js";
 
 describe("AuctionsService", () => {
   let db: AnyDb;
@@ -77,6 +78,48 @@ describe("AuctionsService", () => {
       expect(await service.create(sellerId, baseInput(gem.id))).toEqual({
         ok: false,
         reason: "AUCTION_ALREADY_EXISTS",
+      });
+    });
+
+    it("reposts an unsold listing once with fresh terms and preserves its previous bids", async () => {
+      const gem = await insertGem(db, sellerId, { status: "active" });
+      const now = await dbNow();
+      const previous = await insertAuction(db, gem.id, {
+        status: "active",
+        startAt: new Date(now.getTime() - 7_200_000),
+        endAt: new Date(now.getTime() - 3_600_000),
+        reservePrice: 5000,
+        highestBid: 1500,
+        highestBidderId: otherId,
+      });
+      await db.insert(bids).values({ auctionId: previous.id, bidderId: otherId, amount: 1500 });
+      expect(await closeAuction(db, previous.id)).toMatchObject({ ok: true, outcome: "closed" });
+
+      const terms = {
+        ...baseInput(gem.id),
+        startPrice: 750,
+        reservePrice: 1250,
+        durationSeconds: 7200,
+      };
+      const attempts = await Promise.all([
+        service.create(sellerId, terms),
+        service.create(sellerId, terms),
+      ]);
+      const posted = attempts.find((result) => result.ok);
+      expect(attempts.filter((result) => result.ok)).toHaveLength(1);
+      expect(attempts).toContainEqual({ ok: false, reason: "AUCTION_ALREADY_EXISTS" });
+      expect(posted?.auction).toMatchObject({
+        gemId: gem.id,
+        status: "active",
+        startPrice: 750,
+        reservePrice: 1250,
+        highestBid: null,
+        bidCount: 0,
+      });
+      expect(posted?.auction.id).not.toBe(previous.id);
+      expect(await service.get(previous.id)).toMatchObject({
+        ok: true,
+        auction: { status: "closed", highestBid: 1500, bidCount: 1 },
       });
     });
 
