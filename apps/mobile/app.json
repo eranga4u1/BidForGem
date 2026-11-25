@@ -2,7 +2,7 @@
   "expo": {
     "name": "BidForGem",
     "slug": "bidforgem",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bidforgem",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.bidforgem.app",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

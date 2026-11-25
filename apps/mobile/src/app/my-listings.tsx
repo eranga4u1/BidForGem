@@ -79,7 +79,10 @@ export default function MyListingsScreen(): React.ReactElement {
       }
       renderItem={({ item: { gem, auction } }) => {
         const photo = gem.media.find((m) => m.type === "photo" && m.status === "ready" && m.url);
-        const st = GEM_STATUS[gem.status] ?? { label: gem.status, color: theme.faint };
+        const st =
+          auction?.status === "closed" && gem.status === "active"
+            ? { label: "Unsold", color: theme.warn }
+            : (GEM_STATUS[gem.status] ?? { label: gem.status, color: theme.faint });
         return (
           <Pressable
             style={({ pressed }) => [styles.row, pressed && styles.pressed]}

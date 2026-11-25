@@ -1,10 +1,12 @@
 import type { BidHistoryItem, GemSeller, PublicAuction, PublicGemDetail } from "@gem/contracts";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { EmptyState } from "@/components/EmptyState";
 import { GemThumb } from "@/components/GemThumb";
 import { PulseDot } from "@/components/PulseDot";
+import { RepostAuctionForm } from "@/components/RepostAuctionForm";
 import { Skeleton } from "@/components/Skeleton";
 import { StatusPill } from "@/components/StatusPill";
 import { api, tokens } from "@/lib/api";
@@ -27,6 +29,7 @@ export default function AuctionScreen(): React.ReactElement {
   const [amount, setAmount] = useState("");
   const [placing, setPlacing] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
+  const [showRepost, setShowRepost] = useState(false);
 
   const sync = useCallback(async () => {
     if (!id) return;
@@ -109,6 +112,7 @@ export default function AuctionScreen(): React.ReactElement {
     auction.highestBid === null ? auction.startPrice : auction.highestBid + auction.minIncrement;
   const minLabel = formatMoney(minNext, auction.currency);
   const isSeller = user?.id === gem.sellerId;
+  const canRepost = isSeller && auction.status === "closed" && gem.status === "active";
   const photo = gem.media.find((m) => m.type === "photo" && m.status === "ready" && m.url);
 
   async function placeBid(): Promise<void> {
@@ -135,10 +139,12 @@ export default function AuctionScreen(): React.ReactElement {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
     >
       <View style={styles.hero}>
         <GemThumb uri={photo?.url} fill radius={radius.xl} diamond={104} />
@@ -236,10 +242,30 @@ export default function AuctionScreen(): React.ReactElement {
         )}
       </View>
 
+      {canRepost &&
+        (showRepost ? (
+          <RepostAuctionForm
+            key={auction.id}
+            auction={auction}
+            onCancel={() => setShowRepost(false)}
+            onPosted={(id) => router.replace(`/auctions/${id}`)}
+          />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setShowRepost(true)}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.btnText}>Repost auction</Text>
+          </Pressable>
+        ))}
+
       <Text style={styles.sectionTitle}>Bid history</Text>
       {history.length === 0 ? (
         <View style={styles.emptyHist}>
-          <Text style={styles.faint}>No bids yet — be the first to bid.</Text>
+          <Text style={styles.faint}>
+            {ended ? "No bids were placed." : "No bids yet — be the first to bid."}
+          </Text>
         </View>
       ) : (
         <View style={styles.histCard}>
@@ -260,13 +286,13 @@ export default function AuctionScreen(): React.ReactElement {
                 <Text style={[styles.histAmount, i === 0 && styles.histAmountLead]}>
                   {formatMoney(b.amount, auction.currency)}
                 </Text>
-                {i === 0 ? <Text style={styles.leadTag}>Leading</Text> : null}
+                {i === 0 && !ended ? <Text style={styles.leadTag}>Leading</Text> : null}
               </View>
             </View>
           ))}
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

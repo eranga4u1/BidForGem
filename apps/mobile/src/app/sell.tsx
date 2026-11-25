@@ -6,16 +6,10 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { api, GemApiError } from "@/lib/api";
+import { AUCTION_DURATIONS } from "@/lib/auction-terms";
 import { useAuth } from "@/lib/auth";
 import { uploadGemPhoto, type PickedPhoto } from "@/lib/upload";
 import { radius, space, theme } from "@/lib/theme";
-
-const DURATIONS = [
-  { label: "1 hour", seconds: 3600 },
-  { label: "1 day", seconds: 86400 },
-  { label: "3 days", seconds: 259200 },
-  { label: "7 days", seconds: 604800 },
-];
 
 export default function SellScreen(): React.ReactElement {
   const router = useRouter();
@@ -232,7 +226,7 @@ export default function SellScreen(): React.ReactElement {
 
       <Text style={styles.label}>Duration</Text>
       <View style={styles.chips}>
-        {DURATIONS.map((d) => {
+        {AUCTION_DURATIONS.map((d) => {
           const active = d.seconds === durationSeconds;
           return (
             <Pressable
